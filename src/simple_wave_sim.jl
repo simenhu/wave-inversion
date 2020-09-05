@@ -1,11 +1,18 @@
 # Have to discretize the problem
 #This script is to try to simulate the one dimensional wave equation
 ##
+
+push!(LOAD_PATH, "./src/simutils/")
 using DiffEqOperators
 using DifferentialEquations
 using Plots
-plotlyjs()
+using Interact
 
+using Simutils
+
+using Mux, WebIO
+
+#plotlyjs()
 
 ω = 1
 k = 1
@@ -33,11 +40,19 @@ sol = solve(prob, Tsit5())
 
 
 ##
-plot(sol.u[9])
 
+mp = @manipulate for t=1:length(sol.u)
+    plot(sol.u[t])
+end
+
+ui = dom"div"(mp)
+webio_serve(page("/", req -> ui), 8000)
 
 # Boundary conditions
 # Initial state
 # simulere
 # Plotte
 # Array med forskjellig karakterestikk
+
+# Issues
+# Why is vector 200 samples long
