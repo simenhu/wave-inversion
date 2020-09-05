@@ -1,4 +1,6 @@
 [deps]
+DiffEqOperators = "9fdde737-9c7f-55bf-ade8-46b3f136cc48"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 ORCA = "47be7bcc-f1a6-5447-8b36-7eeeff7534fd"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Plotly = "58dd65bb-95f3-509e-9936-c39a10fdeae7"
