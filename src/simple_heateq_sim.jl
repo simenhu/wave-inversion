@@ -26,15 +26,18 @@ const Δ = CenteredDifference(ord_deriv, ord_approx, h, nknots)
 const bc = Dirichlet0BC(Float64)
 
 t0 = 0.0
-t1 = 0.03
+t1 = 1.00
 u0 = u_analytic.(knots, t0)
+u0_d = zeros(nknots) 
 
-step(u,p,t) = Δ*bc*u
-prob = ODEProblem(step, u0, (t0, t1))
-alg = KenCarp4()
+display(u0_d)
+
+step(du,u,p,t) = Δ*bc*u
+prob = SecondOrderODEProblem(step, u0_d, u0, (t0, t1))
+alg = Tsit5()
 sol = solve(prob, alg)
 
-@test u_analytic.(knots, t1) ≈ sol[end] rtol=1e-3
+#@test u_analytic.(knots, t1) ≈ sol[end] rtol=1e-3
 plot(sol.u)
 
 
