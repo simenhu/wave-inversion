@@ -14,5 +14,3 @@ end
 function second_to_first_order_initial_conditions(u_dot_0, u_0)
     u = [u_0; u_dot_0]
 end
-
-function 
