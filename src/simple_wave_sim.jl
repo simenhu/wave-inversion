@@ -17,7 +17,7 @@ k = 1.0
 T = 100.0 # N
 μ = 0.01 # Kg/m
 #c = (ω/k)^2
-c = T/μ
+c_squared = T/μ
 d = 0.0
 
 number_of_spatial_cells = 100
@@ -50,8 +50,7 @@ Q = Dirichlet0BC(Float64)
 
 function ddx(ddx, dx, x, p, t)
     x[50] = x[50] + f(t)
-    ddx[:] = c*(A_x*Q)*x
-    #ddx[50] = f(t)
+    ddx[:] = c_squared*(A_x*Q)*x
 end
 
 function exitate_x(func, exitation_functions, coords)
