@@ -78,10 +78,10 @@ Function for calculating energy of a vector. Input should be state vector after 
 means that the first part of vector is the state time derivative, and second part is the state. 
 """
 ## Define function for energy
-function energy_of_1D_system(du, u,  T, μ)
+function energy_of_1D_system(du, u, T, μ)
     A_x = CenteredDifference(2, 3, dx, number_of_spatial_cells)
     Q = Dirichlet0BC(Float64)
-    energy = 1/2*T*dot(-(A_x*Q)*u,u) + μ*dot(du, du)
+    energy = 1/2*T*dot(-(A_x*Q)*u,u) + 1/2*μ*dot(du, du)
 end
 
 ##
