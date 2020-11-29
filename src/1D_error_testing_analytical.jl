@@ -13,6 +13,7 @@ plotlyjs()
 
 using Simutils
 
+
 ## Defining constants for string property
 ω = 1.0 
 k = 1.0
@@ -27,9 +28,15 @@ number_of_spatial_cells = 100
 dx = L/(number_of_spatial_cells+1)
 internal_positions = range(0, L, length=(number_of_spatial_cells + 2))[2:end-1]
 
-# Initial conditions
+"""
+x_0 =2*sin.(internal_positions) # Adding 2 to make the function even at the transitions
+dx_0 = zeros(number_of_spatial_cells)
+
+"""
+## Initial conditions, CUDA
 x_0 = CuArray(2*sin.(internal_positions)) # Adding 2 to make the function even at the transitions
 dx_0 = CUDA.zeros(number_of_spatial_cells)
+
 
 c = sqrt(c_squared)
 an_u(x,t) = 2*cos(c*t)*sin(x)
@@ -46,7 +53,8 @@ end
 prob = SecondOrderODEProblem(ddx, dx_0, x_0, sim_time)
 
 ## Simulate
-solver =  AutoTsit5(Rosenbrock23())
+solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7()]
+solver = solvers[6]
 sol = solve(prob, solver)
 
 ## Analysing error
@@ -55,6 +63,7 @@ du = plot(sol[1].x[1])
 u = plot(sol[1].x[2])
 display(plot(u, du, layout = (2,1), size=(1400,600)))
 """
+
 
 ## Define function for energy
 function energy_of_string(sol, T, μ, dx)
@@ -95,4 +104,4 @@ function analysis_plot(sol, analytical, sim_time, time_res, internal_positions; 
     display(plot(title_plot, analytical_plot, state_plot, error_plot, energy_plot, rs_error, layout = (6, 1), size=(1400, 900), link = :x, plot_title=solver_name))
 end
 
-analysis_plot(sol, an_u, sim_time, 0.005, internal_positions, solver_name = " AutoTsit5(Rosenbrock23())")
+analysis_plot(sol, an_u, sim_time, 0.005, internal_positions, solver_name = repr(solver))
