@@ -17,7 +17,7 @@ T = 100.0 # N
 μ = 0.01 # Kg/m
 sim_time = (0.0, 1.0)
 string_length = 2*pi
-number_of_spatial_cells = 100git
+number_of_spatial_cells = 100
 
 # Defining constants for time property
 Δt = 0.001
@@ -28,13 +28,17 @@ x_excitation = sin.(2*pi*frequency*t_vector)
 
 f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.1, 0.017)
 
-internal_positions = range(0, string_length, length=(number_of_spatial_cells + 2))[2:end-1]
+internal_positions = internal_node_positions(0, string_length, number_of_spatial_cells)
 
 ## Initial conditions
 x_0 = zeros(number_of_spatial_cells)
 dx_0 = zeros(number_of_spatial_cells)
+# f = in_place_1D_string(string_length, number_of_spatial_cells, T, μ, [f_excitation], [50])
+c_squared = zeros(100)
+c_squared[1:70] .= T/μ
+c_squared[70:end] .= 2*T/μ
 
-f = in_place_1D_string(string_length, number_of_spatial_cells, T, μ, [f_excitation], [50])
+f = in_place_1D_string_with_coefficients(string_length, number_of_spatial_cells, c_squared, [f_excitation], [50])
 prob = SecondOrderODEProblem(f, dx_0, x_0, sim_time)
 
 ## timing

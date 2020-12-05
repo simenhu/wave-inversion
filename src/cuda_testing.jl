@@ -26,7 +26,7 @@ L = 2*pi
 
 number_of_spatial_cells = 100
 dx = L/(number_of_spatial_cells+1)
-internal_positions = range(0, L, length=(number_of_spatial_cells + 2))[2:end-1]
+internal_positions = internal
 
 """
 x_0 =2*sin.(internal_positions) # Adding 2 to make the function even at the transitions
