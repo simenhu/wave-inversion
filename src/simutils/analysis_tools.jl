@@ -23,3 +23,4 @@ function energy_of_string(sol, string_length, internal_cells, coeffs, T)
     end
     return LinearInterpolation(energy_array, sol.t)
 end
+
