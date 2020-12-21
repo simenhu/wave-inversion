@@ -26,13 +26,14 @@ frequency = 50
 x_excitation = sin.(2*pi*frequency*t_vector)
 
 f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.1, 0.017)
+#f_excitation(t) = 0.0
 internal_positions = internal_node_positions(0, string_length, number_of_cells)
 
 ## Initial conditions
-#x_0 = zeros(number_of_cells)
-#dx_0 = zeros(number_of_cells)
+#u_0 = make_initial_condition(number_of_cells, [sin((pi/100)*i) for i in 0:101][2:101])
+
 u_0 = make_initial_condition(number_of_cells)
-c_squared = zeros(100)
+c_squared = zeros(number_of_cells)
 c_squared[1:end] .= T/μ
 #c_squared[70:end] .= 0.1*T/μ
 
@@ -46,13 +47,14 @@ prob = ODEProblem(f, u_0, sim_time)
 to = TimerOutput()
 
 ## Simulate
-solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(), DPRKN6()]
-solver = solvers[6]
+solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7()]
+solver = solvers[1]
+
 sol = @timeit to "simulation" solve(prob, solver)
 
 energy = energy_of_string(sol, string_length, number_of_cells, c_squared, T)
 root_squared_error(x1, x2) = vec(sum(sqrt.((x1-x2).^2), dims=1))
 
 ## plot image of state compared with analytical solution
-excitation_energy_plot(sol, energy, f_excitation, sim_time, 0.0001, solver_name = repr(solver))
+excitation_energy_plot(sol, energy, f_excitation, sim_time, 0.0005, solver_name = repr(solver))
 display(to)
