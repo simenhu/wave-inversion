@@ -16,8 +16,6 @@ function excitation_energy_plot(sol, energy, excitation_func, sim_time, time_res
     excitation_wave = [excitation_func(t) for t in time_vector]
     simulated_sol = zeros(state_dim, length(time_vector))
 
-    display(size(simulated_sol))
-
     for i in eachindex(time_vector)
         simulated_sol[:, i] = sol(time_vector[i]).x[1]
     end
