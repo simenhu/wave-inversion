@@ -11,13 +11,18 @@ function set_standard_plot_properties()
 end
 
 function excitation_energy_plot(sol, energy, excitation_func, sim_time, time_res; solver_name="Nothing")
-    state_dim = size(sol)[1]÷2
-
+    state_dim = size(sol.u[1].x[1])[1]
     time_vector = sim_time[1]:time_res:sim_time[2]
     excitation_wave = [excitation_func(t) for t in time_vector]
-    simulated_sol = sol(time_vector)[state_dim+1:end,:]
-    energy_vector = energy.(time_vector)
+    simulated_sol = zeros(state_dim, length(time_vector))
 
+    display(size(simulated_sol))
+
+    for i in eachindex(time_vector)
+        simulated_sol[:, i] = sol(time_vector[i]).x[1]
+    end
+    
+    energy_vector = energy.(time_vector)
     clims = [-3.0, 3.0]
 
     title_plot = plot(title = solver_name, grid = false, showaxis = false, bottom_margin = -200Plots.px)

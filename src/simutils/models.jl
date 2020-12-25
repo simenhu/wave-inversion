@@ -83,27 +83,27 @@ end
 General wave equation of two coupled first order differential equations with
 dampening layer and genral a and b coefficients.
 """
-function general_one_dimensional_wave_equation(domain, internal_nodes, a_coeffs, b_coeffs; excitation_func, excitation_positions, pml_width=30)
+function general_one_dimensional_wave_equation(domain, internal_nodes, a_coeffs, b_coeffs; excitation_func, excitation_positions, pml_width)
     dx = domain/(internal_nodes+1)
-    pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=1000.0, order=2)
+    pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=2000.0, order=2)
     
-    A_xv = LeftStaggeredDifference{1}(1, 2, dx, internal_nodes, b_coeffs)
-    A_xu = RightStaggeredDifference{1}(1, 2, dx, internal_nodes, a_coeffs)
+    A_xv = LeftStaggeredDifference{1}(1, 4, dx, internal_nodes, b_coeffs)
+    A_xu = RightStaggeredDifference{1}(1, 4, dx, internal_nodes, a_coeffs)
     Q_v = Dirichlet0BC(Float64)
     Q_u = Dirichlet0BC(Float64)
 
     function du_func(du, u, p, t)
         for i in eachindex(excitation_positions)
-            u.x[2][excitation_positions[i]] = u.x[2][excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+            u.x[1][excitation_positions[i]] = u.x[1][excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
         end
 
         # first equation
         mul!(du.x[1], A_xv, Q_v*u.x[2])
-        du.x[1] .= du.x[1] - u.x[1].*pml_coeffs
+        du.x[1] .= du.x[1] .- u.x[1].*pml_coeffs
 
         # second equation
         mul!(du.x[2], A_xu, Q_u*u.x[1])
-        du.x[2] .= du.x[2] - u.x[2].*pml_coeffs
+        du.x[2] .= du.x[2] .- u.x[2].*pml_coeffs
     end
     return du_func
 end
