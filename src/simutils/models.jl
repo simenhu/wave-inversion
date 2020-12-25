@@ -1,4 +1,4 @@
-export internal_node_positions, string_with_coefficients!, make_initial_condition, string_with_coefficients_and_PML!
+export  string_with_coefficients!, string_with_coefficients_and_PML!, general_one_dimensional_wave_equation
 
 using DiffEqOperators
 using RecursiveArrayTools
@@ -6,12 +6,6 @@ using DifferentialEquations
 using OrdinaryDiffEq
 
 
-"""
-returns a range object which contains the positions of the internal nodes in a range
-"""
-function internal_node_positions(start, stop, number_of_spatial_cells)
-    return range(start, stop, length=(number_of_spatial_cells+2))[2:end-1]
-end
 
 """
 Returns function for double derivative of string
@@ -31,6 +25,7 @@ function string_with_coefficients!(string_length, number_of_cells, coefficients,
     return ddu
 end
 
+
 """
 Returns an array with length equal to number of cells, with a quadratic ramp function
 of the dampning coefficient at hte ends
@@ -43,7 +38,7 @@ function dampening_coefficients(number_of_cells, dampning_width; max_value=1., o
     return coeffs
 end
 
-display(plot(dampening_coefficients(100, 20, order=3)))
+
 
 """
 Returns function for single derivative of sting
@@ -51,7 +46,7 @@ Returns function for single derivative of sting
 function string_with_coefficients_and_PML!(string_length, number_of_cells; coefficients, excitation_func, positions, pml_width=30)
     dx = string_length/(number_of_cells+1)
 
-    pml_coeffs = dampening_coefficients(number_of_cells, pml_width; max_value=1000.0, order=1)
+    pml_coeffs = dampening_coefficients(number_of_cells, pml_width; max_value=1000.0, order=2)
     # c^2 = a*b 
     # c^2 = T/μ
     a = sqrt.(coefficients)
@@ -75,7 +70,6 @@ function string_with_coefficients_and_PML!(string_length, number_of_cells; coeff
         # first equation
         mul!(du.x[1], A_xv, Q_v*u.x[2])
         du.x[1] .= du.x[1] - u.x[1].*pml_coeffs
-        
 
         # second equation
         mul!(du.x[2], A_xu, Q_u*u.x[1])
@@ -84,14 +78,33 @@ function string_with_coefficients_and_PML!(string_length, number_of_cells; coeff
     return du_func
 end 
 
+
 """
-Returns arraypartition intended to use for initial state
+General wave equation of two coupled first order differential equations with
+dampening layer and genral a and b coefficients.
 """
-function make_initial_condition(number_of_cells, initial_condition=nothing)
-    u0 = zeros(number_of_cells) # This is the variable which is double derivative in the original equation
-    if initial_condition != nothing
-        u0 = initial_condition
+function general_one_dimensional_wave_equation(domain, internal_nodes, a_coeffs, b_coeffs; excitation_func, excitation_positions, pml_width=30)
+    dx = domain/(internal_nodes+1)
+    pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=1000.0, order=2)
+    
+    A_xv = LeftStaggeredDifference{1}(1, 2, dx, internal_nodes, b_coeffs)
+    A_xu = RightStaggeredDifference{1}(1, 2, dx, internal_nodes, a_coeffs)
+    Q_v = Dirichlet0BC(Float64)
+    Q_u = Dirichlet0BC(Float64)
+
+    function du_func(du, u, p, t)
+        for i in eachindex(excitation_positions)
+            u.x[2][excitation_positions[i]] = u.x[2][excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+        end
+
+        # first equation
+        mul!(du.x[1], A_xv, Q_v*u.x[2])
+        du.x[1] .= du.x[1] - u.x[1].*pml_coeffs
+
+        # second equation
+        mul!(du.x[2], A_xu, Q_u*u.x[1])
+        du.x[2] .= du.x[2] - u.x[2].*pml_coeffs
     end
-    v0 = zeros(number_of_cells)
-    uv0 = ArrayPartition(u0,v0)
+    return du_func
 end
+

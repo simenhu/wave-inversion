@@ -24,3 +24,9 @@ function energy_of_string(sol, string_length, internal_cells, coeffs, T)
     return LinearInterpolation(energy_array, sol.t)
 end
 
+function energy_of_coupled_wave_equations(sol, dx, number_of_cells, a, b)
+
+
+
+end
+
