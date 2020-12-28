@@ -98,11 +98,11 @@ function general_one_dimensional_wave_equation(domain, internal_nodes, a_coeffs,
         end
 
         # first equation
-        mul!(du.x[1], A_xv, Q_v*u.x[2])
+        mul!(du.x[1], A_xv*Q_v, u.x[2])
         du.x[1] .= du.x[1] .- u.x[1].*pml_coeffs
 
         # second equation
-        mul!(du.x[2], A_xu, Q_u*u.x[1])
+        mul!(du.x[2], A_xu*Q_u, u.x[1])
         du.x[2] .= du.x[2] .- u.x[2].*pml_coeffs
     end
     return du_func

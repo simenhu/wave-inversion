@@ -7,6 +7,7 @@ using LinearAlgebra
 using Plots
 using DataInterpolations
 using TimerOutputs
+using BenchmarkTools
 
 plotlyjs()
 
@@ -29,7 +30,8 @@ f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.03, 0.017)
 internal_positions = internal_node_positions(0, string_length, number_of_cells)
 
 ## Initial conditions
-u_0 = make_initial_condition(number_of_cells)
+initial_position = sin.((2*pi/string_length)*internal_positions)
+u_0 = make_initial_condition(number_of_cells, initial_position)
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
 # a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 
@@ -43,6 +45,7 @@ solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoi
 solver = solvers[6]
 
 sol = @timeit to "simulation" solve(prob, solver)
+# sol = @benchmark solve(prob, solver, save_everystep=false)
 
 ## plot image of state compared with analytical solution
 energy = energy_of_string(sol, string_length, number_of_cells, a_coeffs, T)
@@ -61,7 +64,5 @@ anim = @gif for t = sim_time[1]:time_resolution:sim_time[2]
     plot(internal_positions, sol(t).x[1], legend=false, ylims=(-3,3))
     heatmap!(internal_positions,range(-3, 3, length=100), materials)
 end
-# gif(anim, "Wave_into_dampening_layers.gif" ,fps=30)
 
-## heatmap plot Testing
-#heatmap(materials)
+# gif(anim, "Wave_into_dampening_layers.gif" ,fps=30)
