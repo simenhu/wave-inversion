@@ -67,4 +67,5 @@ end
 
 ##
 display(to)
+display(anim)
 # gif(anim, "Wave_into_dampening_layers.gif" ,fps=30)

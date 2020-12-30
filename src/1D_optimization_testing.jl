@@ -11,6 +11,9 @@ using BenchmarkTools
 
 plotlyjs()
 
+using DelimitedFiles,Plots
+using DiffEqSensitivity, Zygote, Flux, DiffEqFlux, Optim
+
 using Simutils
 
 ## Defining constants for string property
@@ -21,6 +24,8 @@ string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
 
+# Making inversion data
+
 # Defining constants for time property
 Δt = 0.001
 t_vector = sim_time[1]:Δt:sim_time[2]
@@ -30,41 +35,99 @@ f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.03, 0.017)
 internal_positions = internal_node_positions(0, string_length, number_of_cells)
 
 ## Initial conditions
-initial_position = sin.((2*pi/string_length)*internal_positions)
 u_0 = make_initial_condition(number_of_cells)
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
-# a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
+Θ = (a_coeffs, b_coeffs)
 
 ## Define ODE function
-f = general_one_dimensional_wave_equation(string_length, number_of_cells, a_coeffs, b_coeffs, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
-prob = ODEProblem(f, u_0, sim_time)
+f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
+prob = ODEProblem(f, u_0, sim_time, p=Θ)
 
 ## Simulate
 to = TimerOutput()
 solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(), KenCarp4()]
-solver = solvers[1]
+solver = solvers[6]
 
-sol = @timeit to "simulation" solve(prob, solver)
-# sol = @benchmark solve(prob, solver, save_everystep=false)
-
-## plot image of state compared with analytical solution
-energy = energy_of_string(sol, string_length, number_of_cells, a_coeffs, T)
-root_squared_error(x1, x2) = vec(sum(sqrt.((x1-x2).^2), dims=1))
-excitation_energy_plot(sol, energy, f_excitation, sim_time, 0.0005, solver_name = repr(solver))
+sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ)
+# bench = @benchmark solve(prob, solver, save_everystep=false, p=Θ)
 display(to)
 
-## make animation
-materials = zeros(100, length(internal_positions))
-for i in 1:size(materials)[1]
-    materials[i, :] .= a_coeffs
+## Optimization part
+#=
+solution_time = sol.t
+Θ_start = [zeros(number_of_cells), zeros(number_of_cells)]
+
+function predict(Θ)
+    Array(solve(prob, solver, p=Θ, saveat=solution_time))
 end
 
-time_resolution = 0.001
-anim = @gif for t = sim_time[1]:time_resolution:sim_time[2]
-    plot(internal_positions, sol(t).x[1], legend=false, ylims=(-3,3))
-    heatmap!(internal_positions,range(-3, 3, length=100), materials)
+function loss(Θ)
+    pred = predict(Θ)
+    l = pred - sol
+    return sum(abs2, l), pred
 end
+
+
+l, pred = loss(Θ_start)
+display(size(pred))
+display(size(sol))
+display(size(solution_time))
+
+LOSS = []
+PRED = []
+PARS = []
+
+cb = function(Θ, l, pred)
+    display(l)
+    append!(PRED, [pred])
+    append!(LOSS, l)
+    append!(PARS, [θ])
+    false
+end
+
+# res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
+# ps = res.minimizer
+# display(ps)
 
 ##
-display(to)
-# gif(anim, "Wave_into_dampening_layers.gif" ,fps=30)
+
+du01, dp1 = Zygote.gradient(loss, Θ)
+
+##
+
+du02, dp02 = loss(Θ_start)
+
+
+##
+
+predict_sol = predict(Θ_start)
+
+## Test derivative of derivative DiffEqOperators
+
+test_number_of_nodes = 100
+dx = 0.1
+coefs = ones(test_number_of_nodes)
+coefs[5:end] .= 2.0
+
+Q = Dirichlet0BC(Float64)
+A_x = RightStaggeredDifference{1}(1, 4, dx, test_number_of_nodes, coefs)
+
+function f_test(x, p)
+    Q = Dirichlet0BC(Float64)
+    A_x = RightStaggeredDifference{1}(1, 4, dx, test_number_of_nodes, p)
+    return (A_x*Q)*x
+end
+
+x_0_test = sin.((2pi/test_number_of_nodes).*1:test_number_of_nodes)
+
+Zygote.gradient(p -> sum(f_test(x_0_test, p)), coefs)
+
+##
+f_test_2(p) = sum(f_test(x_0_test, p))
+f_test_2(coefs)
+
+## 
+
+Zygote.gradient(coeff -> sum(RightStaggeredDifference{1}(1,4,dx,test_number_of_nodes, coeff)), coefs)
+
+=#

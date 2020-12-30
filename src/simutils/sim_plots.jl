@@ -29,3 +29,6 @@ function excitation_energy_plot(sol, energy, excitation_func, sim_time, time_res
     energy_plot = plot(time_vector, energy_vector, title = "energy")
     display(plot(title_plot, excitation_plot, state_plot, energy_plot, layout = (4, 1), size=(1400, 900), link = :x, plot_title=solver_name))
 end
+
+function plot_solution_heatmap(sol)
+end
