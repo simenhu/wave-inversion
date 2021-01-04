@@ -1,4 +1,4 @@
-export simple_test_func, excitation_energy_plot, set_standard_plot_properties
+export simple_test_func, excitation_energy_plot, set_standard_plot_properties, animate_solution
 
 using Plots
 
@@ -31,4 +31,36 @@ function excitation_energy_plot(sol, energy, excitation_func, sim_time, time_res
 end
 
 function plot_solution_heatmap(sol)
+end
+
+"""
+Make animation of 1D-wave equation
+"""
+function animate_solution(sol, a_coeffs, b_coeffs, sim_time, time_resolution)
+
+    material_height_samples = 100
+    internal_nodes = length(a_coeffs)
+    internal_positions = 1:internal_nodes
+
+    a_materials = zeros(material_height_samples, internal_nodes)
+    for i in 1:material_height_samples
+        a_materials[i, :] .= a_coeffs
+    end
+
+    b_materials = zeros(material_height_samples, internal_nodes)
+    for i in 1:material_height_samples
+        b_materials[i, :] .= b_coeffs
+    end
+
+    max_value = maximum(sol[:,:])
+    min_value = minimum(sol[:,:])
+    display(max_value)
+
+    anim = @gif for t = sim_time[1]:time_resolution:sim_time[2]
+        plot(internal_positions, sol(t).x[1], legend=false, ylims=(min_value, max_value))
+        heatmap!(internal_positions,range(0, max_value, length=material_height_samples), a_materials) # plotting a_coeffs on top
+        heatmap!(internal_positions,range(min_value, 0, length=material_height_samples), b_materials) # plotting b_coeffs on bottom
+    end
+
+    return anim
 end

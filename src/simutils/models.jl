@@ -50,9 +50,9 @@ function general_one_dimensional_wave_equation_with_parameters!(domain, internal
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        for i in eachindex(excitation_positions)
-            u.x[1][excitation_positions[i]] = u.x[1][excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
-        end
+        # for i in eachindex(excitation_positions)
+        #     u.x[1][excitation_positions[i]] = u.x[1][excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+        # end
 
         # first equation
         A_xvq_operator = A_xv*Q_v
@@ -89,10 +89,10 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         end
 
         # first equation
-        du = A_xv*Q_v*v - u.*pml_coeffs
+        du = (A_xv*Q_v)*v - u.*pml_coeffs
 
         # second equation
-        dv = A_xu*Q_u*v - v.*pml_coeffs
+        dv = (A_xu*Q_u)*u - v.*pml_coeffs
 
         return ArrayPartition(du, dv)
     end
