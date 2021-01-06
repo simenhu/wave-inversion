@@ -5,6 +5,7 @@ using DiffEqOperators
 using RecursiveArrayTools
 using DifferentialEquations
 using OrdinaryDiffEq
+using Zygote: @ignore
 
 
 """
@@ -84,15 +85,15 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        for i in eachindex(excitation_positions)
+        @ignore for i in eachindex(excitation_positions)
             u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
         end
 
         # first equation
-        du = (A_xv*Q_v)*v - u.*pml_coeffs
+        du = A_xv*(Q_v*v) - u.*pml_coeffs
 
         # second equation
-        dv = (A_xu*Q_u)*u - v.*pml_coeffs
+        dv = A_xu*(Q_u*u) - v.*pml_coeffs
 
         return ArrayPartition(du, dv)
     end

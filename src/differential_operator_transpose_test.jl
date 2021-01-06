@@ -4,6 +4,7 @@ using DiffEqOperators
 dx = 0.1
 internal_nodes = 9
 coeffs = [1.0 for n in 1:9]
+state_0 = [1.0 for n in 1:11]
 
 Ax = RightStaggeredDifference{1}(1, 6, dx, internal_nodes, coeffs)
 display(Array(Ax))

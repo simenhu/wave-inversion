@@ -17,6 +17,7 @@ using DiffEqSensitivity, Zygote, Flux, DiffEqFlux, Optim
 
 using Simutils
 
+
 ## Defining constants for string property
 T = 100.0 # N
 μ = 0.01 # Kg/m
@@ -40,7 +41,7 @@ internal_positions = internal_node_positions(0, string_length, number_of_cells)
 u_0 = make_initial_condition(number_of_cells)
 # a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
-Θ = (a_coeffs, b_coeffs)
+Θ  = (a_coeffs, b_coeffs)
 
 ## Define ODE function
 f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
@@ -70,11 +71,11 @@ end
 function loss(Θ)
     pred = predict(Θ)
     l = pred - sol
-    return sum(abs2, l)
+    return sum(abs2, l), pred
 end
 
 
-l = loss(Θ_start)
+l, pred = loss(Θ_start)
 display(size(pred))
 display(size(sol))
 display(size(solution_time))
@@ -90,13 +91,13 @@ cb = function(Θ, l, pred)
     append!(PARS, [θ])
     false
 end
-
-# res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
-# ps = res.minimizer
-# display(ps)
+##
+res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
+ps = res.minimizer
+display(ps)
 
 ##
-
+#=
 du01, dp1 = Zygote.gradient(loss, Θ)
 
 ##https://mitmath.github.io/18337/
@@ -145,7 +146,7 @@ function mutation_testing(x)
 end
 
 function rrule(::typeof(mutation_testing), x)
-    
+
     function mutation_testing_pullback(ΔΏ)
         return (NO_FIELDS, ΔΏ*x)
     end
@@ -156,3 +157,4 @@ deriv_function(x) = sum(mutation_testing(x))
 
 x_deriv_test = 5.
 Zygote.gradient(deriv_function, x_deriv_test)
+=#
