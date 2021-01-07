@@ -2,6 +2,9 @@ push!(LOAD_PATH, "./src/simutils/")
 using Zygote
 using Simutils
 import ChainRulesCore: rrule, DoesNotExist, NO_FIELDS
+using Random
+using DiffEqOperators
+Random.seed!(1)
 
 deriv_function(x) = sum(mutation_testing(x))
 
@@ -41,4 +44,17 @@ a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], 
 f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
 
 t=0.0
-grad = Zygote.gradient(a_coeffs -> sum(f(u_0, (a_coeffs, b_coeffs), t)), a_coeffs)
+grad = Zygote.gradient(coeffs -> sum(f(u_0, (coeffs, b_coeffs), t)), a_coeffs)
+
+## Test with simpler function
+u_2 = rand(number_of_cells+2)  # adding two here to make up for the missing ghost nodes
+function simple_adjont_test_function()
+    function du(u_0, coeffs)
+        Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells, coeffs)
+        return Ax*u_0
+    end
+end
+f_2 = simple_adjont_test_function()
+
+grad = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)), a_coeffs)
+
