@@ -4,6 +4,11 @@ using Simutils
 import ChainRulesCore: rrule, DoesNotExist, NO_FIELDS
 using Random
 using DiffEqOperators
+using Plots
+using LinearAlgebra
+using Infiltrator
+
+plotlyjs()
 Random.seed!(1)
 
 deriv_function(x) = sum(mutation_testing(x))
@@ -44,17 +49,27 @@ a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], 
 f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
 
 t=0.0
-grad = Zygote.gradient(coeffs -> sum(f(u_0, (coeffs, b_coeffs), t)), a_coeffs)
+# grad = Zygote.gradient(coeffs -> sum(f(u_0, (coeffs, b_coeffs), t)), a_coeffs)
 
 ## Test with simpler function
-u_2 = rand(number_of_cells+2)  # adding two here to make up for the missing ghost nodes
+
+number_of_cells_2 = 100
+# u_2 = rand(number_of_cells_2+2)  # adding two here to make up for the missing ghost nodes
+u_2 = sin.(internal_node_positions(0, 2*pi, number_of_cells_2))
+coeffs_2 = [1.0 for i in 1:number_of_cells_2]
+
 function simple_adjont_test_function()
-    function du(u_0, coeffs)
-        Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells, coeffs)
-        return Ax*u_0
+    function du(x, coeffs)
+        Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
+        Q = Dirichlet0BC(Float64)
+        # @infiltrate
+        return Ax*(Q*x), Ax
     end
 end
 f_2 = simple_adjont_test_function()
 
-grad = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)), a_coeffs)
+grad = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)[1]), coeffs_2)
+plot(grad[1])
 
+res, A = f_2(u_2, coeffs_2)
+plot(res)

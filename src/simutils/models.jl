@@ -6,6 +6,7 @@ using RecursiveArrayTools
 using DifferentialEquations
 using OrdinaryDiffEq
 using Zygote: @ignore
+using Infiltrator
 
 
 """
@@ -70,7 +71,8 @@ end
 
 function general_one_dimensional_wave_equation_with_parameters(domain, internal_nodes, p; excitation_func, excitation_positions, pml_width)
     
-    a_coeffs, b_coeffs = p
+    # a_coeffs =  p[:,1]
+    # b_coeffs =  p[:,2]
     
     dx = domain/(internal_nodes+1)
     pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=2000.0, order=2)
@@ -79,16 +81,27 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         u = @view state.x[1][:]
         v = @view state.x[2][:]
 
-        a_coeffs, b_coeffs = p
+        if size(p) != (628, 2)
+            @infiltrate
+        end
+
+        # a_coeffs = p[:,1]
+        # b_coeffs = p[:,2]
+
+        a_coeffs = p
+        b_coeffs = p
+
+        # @infiltrate
+        
         A_xv = LeftStaggeredDifference{1}(1, 4, dx, internal_nodes, b_coeffs)
         A_xu = RightStaggeredDifference{1}(1, 4, dx, internal_nodes, a_coeffs)
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        @ignore for i in eachindex(excitation_positions)
-            u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
-        end
-
+        # @ignore for i in eachindex(excitation_positions)
+        #     u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+        # end
+    
         # first equation
         du = A_xv*(Q_v*v) - u.*pml_coeffs
 

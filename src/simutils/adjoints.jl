@@ -2,6 +2,7 @@ import DiffEqOperators, ChainRules
 import LinearAlgebra
 import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk
 using SparseArrays
+using Infiltrator
 
 export mutation_testing, rrule
 
@@ -36,11 +37,21 @@ function rrule(::typeof(*), A::DerivativeOperator, M::AbstractArray)
 end
 
 
-function rrule(::Type{BoundaryPaddedVector}, l, r, u)
+function rrule(::Type{<:BoundaryPaddedVector}, l, r, u)
     v = BoundaryPaddedVector(l, r, u)
     function BoundaryPaddedVector_pullback(ΔΏ)
+        return (NO_FIELDS, ΔΏ[1], ΔΏ[2:end-1], ΔΏ[end])
     end
     return v, BoundaryPaddedVector_pullback
+end
+
+function rrule(::typeof(*), Q::RobinBC, u::AbstractArray)
+    b = Q*u
+    function mul_pullback(ΔΏ)
+        ∂u = ΔΏ[2:end-1]
+        return (NO_FIELDS, DoesNotExist(), ∂u)
+    end
+    return b, mul_pullback
 end
 
 # A bit uncertain if this is necessary. Shouldn't just the derivative of
@@ -60,21 +71,21 @@ end
 #     return deriv_operator, DerivativeOperator_pullback
 # end
 
-function rrule(::Type{<:DerivativeOperator}, derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, coeff_func)
-    # Operator to be returnes as the primal
-    A = DerivativeOperator{T,N,false,T,typeof(stencil_coefs), typeof(low_boundary_coefs),typeof(coefficients), typeof(coeff_func)}(
-        derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, coeff_func)
+# function rrule(::Type{<:DerivativeOperator}, derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, coeff_func)
+#     # Operator to be returnes as the primal
+#     A = DerivativeOperator{T,N,false,T,typeof(stencil_coefs), typeof(low_boundary_coefs),typeof(coefficients), typeof(coeff_func)}(
+#         derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, coeff_func)
     
-    # Operator to be used in calculating the  
-    _A = SparseMatrixCSC(DerivativeOperator{T,N,false,T,typeof(stencil_coefs), typeof(low_boundary_coefs),typeof(coefficients), typeof(coeff_func)}(
-        derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, 1.0)) # Should maybe change this to type dependent one(...)
-    function DerivativeOperator_pullback(ΔΏ)
-            # ∂_coefficients = concretized_deriv_operator'*ΔΏ
-            ∂_coefficients = diag(_A\ΔΏ)
-        return (NO_FIELDS, DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(), ∂_coefficients)
-    end
-    return A, DerivativeOperator_pullback
-end
+#     # Operator to be used in calculating the  
+#     _A = SparseMatrixCSC(DerivativeOperator{T,N,false,T,typeof(stencil_coefs), typeof(low_boundary_coefs),typeof(coefficients), typeof(coeff_func)}(
+#         derivative_order, approximation_order, dx, len, stencil_length, stencil_coefs, boundary_stencil_length, boundary_point_count, low_boundary_coefs, high_boundary_coefs, coefficients, 1.0)) # Should maybe change this to type dependent one(...)
+#     function DerivativeOperator_pullback(ΔΏ)
+#             # ∂_coefficients = concretized_deriv_operator'*ΔΏ
+#             ∂_coefficients = diag(_A\ΔΏ)
+#         return (NO_FIELDS, DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(),DoesNotExist(), ∂_coefficients)
+#     end
+#     return A, DerivativeOperator_pullback
+# end
 
 function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximation_order, dx, len, coeff_func)
     A = RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)

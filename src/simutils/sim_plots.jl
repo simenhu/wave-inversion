@@ -54,7 +54,6 @@ function animate_solution(sol, a_coeffs, b_coeffs, sim_time, time_resolution)
 
     max_value = maximum(sol[:,:])
     min_value = minimum(sol[:,:])
-    display(max_value)
 
     anim = @gif for t = sim_time[1]:time_resolution:sim_time[2]
         plot(internal_positions, sol(t).x[1], legend=false, ylims=(min_value, max_value))
