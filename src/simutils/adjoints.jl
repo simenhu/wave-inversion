@@ -89,10 +89,14 @@ end
 
 function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximation_order, dx, len, coeff_func)
     A = RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)
+    # We remove the first and last coloumn of our reference derivative operator and
+    # first and last row of the backpropagated derivative
     _A = SparseMatrixCSC(RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0))
     function RightStaggeredDifference_pullback(ΔΏ)
         # ∂c = _A'*ΔΏ
-        ∂c = diag(_A\ΔΏ)
+        # ∂c = diag(_A\ΔΏ)
+        # ∂c = diag(_A[:,2:end-1]\ΔΏ[:,2:end-1])
+        ∂c = diag(ΔΏ[:,2:end-1])./diag(_A[:,2:end-1])
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, RightStaggeredDifference_pullback
@@ -109,7 +113,9 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
 
     function LeftStaggeredDifference_pullback(ΔΏ)
         # ∂c = _A'*ΔΏ
-        ∂c = diag(_A\ΔΏ)
+        # ∂c = diag(_A\ΔΏ)
+        # ∂c = diag(_A[:,2:end-1]\ΔΏ[:,2:end-1])
+        ∂c = diag(ΔΏ[:,2:end-1])./diag(_A[:,2:end-1])
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, LeftStaggeredDifference_pullback

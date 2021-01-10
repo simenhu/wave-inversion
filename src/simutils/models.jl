@@ -7,7 +7,7 @@ using DifferentialEquations
 using OrdinaryDiffEq
 using Zygote: @ignore
 using Infiltrator
-
+using Profile
 
 """
 Returns an array with length equal to number of cells, with a quadratic ramp function
@@ -81,9 +81,6 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         u = @view state.x[1][:]
         v = @view state.x[2][:]
 
-        if size(p) != (628, 2)
-            @infiltrate
-        end
 
         # a_coeffs = p[:,1]
         # b_coeffs = p[:,2]
@@ -98,9 +95,9 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        # @ignore for i in eachindex(excitation_positions)
-        #     u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
-        # end
+        @ignore for i in eachindex(excitation_positions)
+            u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+        end
     
         # first equation
         du = A_xv*(Q_v*v) - u.*pml_coeffs

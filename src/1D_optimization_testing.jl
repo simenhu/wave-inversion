@@ -21,7 +21,7 @@ using Simutils
 ## Defining constants for string property
 T = 100.0 # N
 μ = 0.01 # Kg/m
-sim_time = (0.0, 0.15)
+sim_time = (0.0, 0.01)
 string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
@@ -96,12 +96,15 @@ cb = function(Θ, l, pred)
 end
 
 ## test gradient of loss
-grad = Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
+@profview global grad_coeff = @timeit to "gradient" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
+display(plot(grad[1]))
+display(to)
 
 ## Optimization
-res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
-ps = res.minimizer
-display(ps)
+
+# res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
+# ps = res.minimizer
+# display(ps)
 
 ## test predict function
 predict(Θ_start)
