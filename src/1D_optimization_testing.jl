@@ -97,7 +97,7 @@ end
 
 ## test gradient of loss
 @profview global grad_coeff = @timeit to "gradient" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
-display(plot(grad[1]))
+display(plot(grad_coeff[1]))
 display(to)
 
 ## Optimization

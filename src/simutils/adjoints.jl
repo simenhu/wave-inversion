@@ -1,6 +1,6 @@
-import DiffEqOperators, ChainRules
+import DiffEqOperators
 import LinearAlgebra
-import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk
+import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk, Composite
 using SparseArrays
 using Infiltrator
 
@@ -64,7 +64,9 @@ function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximati
         # ∂c = _A'*ΔΏ
         # ∂c = diag(_A\ΔΏ)
         # ∂c = diag(_A[:,2:end-1]\ΔΏ[:,2:end-1])
-        ∂c = diag(ΔΏ[:,2:end-1])./diag(_A[:,2:end-1])
+        ∂c = ΔΏ[:,2:end-1]'./diag(_A[:,2:end-1])
+        # ∂c = diag(ΔΏ[:,2:end-1]./diag(_A[:,2:end-1]))
+        # @infiltrate
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, RightStaggeredDifference_pullback
