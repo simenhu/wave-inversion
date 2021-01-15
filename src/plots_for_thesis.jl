@@ -21,7 +21,7 @@ using Simutils
 ## Defining constants for string property
 T = 100.0 # N
 μ = 0.01 # Kg/m
-sim_time = (0.0, 0.01)
+sim_time = (0.0, 0.15)
 string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
@@ -59,68 +59,8 @@ sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ)
 display(to)
 heatmap(sol[:,:])
 ##
-# display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
+display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
-## Optimization part
-
-solution_time = sol.t
-Θ_start = hcat(ones(number_of_cells), ones(number_of_cells))
-# Θ_start = ones(number_of_cells)
-
-function predict(Θ)
-    Array(solve(prob, solver, p=Θ, saveat=solution_time))
-end
-
-function loss(Θ)
-    pred = predict(Θ)
-    l = pred - sol
-    return sum(abs2, l), pred
-end
-
-
-l, pred = loss(Θ_start)
-display(size(pred))
-display(size(sol))
-display(size(solution_time))
-
-LOSS = []
-PRED = []
-PARS = []
-
-cb = function(Θ, l, pred)
-    display(l)
-    append!(PRED, [pred])
-    append!(LOSS, l)
-    append!(PARS, [θ])
-    false
-end
-
-## test gradient of loss
-@profview global grad_coeff = @timeit to "gradient" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
-display(plot(grad_coeff[1]))
-display(to)
-
-## Optimization
-
-# res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
-# ps = res.minimizer
-# display(ps)
-
-## test predict function
-predict(Θ_start)
-
-## test loss function
-
-loss(Θ_start)
-
-## Test modell function
-display(typeof(f(u_0, Θ_start, 0.0)))
-
-
-##
-
-
-
-
-
-
+## Energy plot
+energy = energy_of_coupled_wave_equations(sol, a_coeffs, b_coeffs)
+display(plot(energy))

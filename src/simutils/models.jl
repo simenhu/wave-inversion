@@ -82,11 +82,11 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         v = @view state.x[2][:]
 
 
-        # a_coeffs = p[:,1]
-        # b_coeffs = p[:,2]
+        a_coeffs = p[:,1]
+        b_coeffs = p[:,2]
 
-        a_coeffs = p
-        b_coeffs = p
+        # a_coeffs = p
+        # b_coeffs = p
 
         # @infiltrate
         
@@ -110,10 +110,12 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
     return du_func
 end
 
-function one_dimensional_wave_equation(domain, internal_nodes, p; excitation_func, excitation_positions, pml_width)
+function one_dimensional_wave_equation(domain, internal_nodes, 
+    p; excitation_func, excitation_positions, pml_width)
     
     dx = domain/(internal_nodes+1)
-    pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=2000.0, order=2)
+    pml_coeffs = dampening_coefficients(internal_nodes, 
+    pml_width; max_value=2000.0, order=2)
 
     function du_func(state, p, t)
         u = @view state.x[1][:]
@@ -128,7 +130,8 @@ function one_dimensional_wave_equation(domain, internal_nodes, p; excitation_fun
         Q_u = Dirichlet0BC(Float64)
 
         @ignore for i in eachindex(excitation_positions)
-            u[excitation_positions[i]] = u[excitation_positions[i]] + excitation_func[i](t) # add the excitation value in the correct state
+            u[excitation_positions[i]] = u[excitation_positions[i]] 
+            + excitation_func[i](t) # add the excitation value in the correct state
         end
     
         # first equation

@@ -1,4 +1,4 @@
-export energy_of_string
+export energy_of_string, energy_of_coupled_wave_equations
 
 using DifferentialEquations
 using DiffEqOperators
@@ -24,9 +24,19 @@ function energy_of_string(sol, string_length, internal_cells, coeffs, T)
     return LinearInterpolation(energy_array, sol.t)
 end
 
-function energy_of_coupled_wave_equations(sol, dx, number_of_cells, a, b)
+function energy_of_coupled_wave_equations(sol, a, b)
+    ɛ_r = 1 ./ b 
+    μ_r = 2 ./ a
 
+    energy_array = zeros(length(sol))
+    for i in eachindex(sol)
+        u = sol[i].x[1]
+        v = sol[i].x[2]
 
+        e = 1/2*dot(u, ɛ_r.*u) + 1/2*dot(v,μ_r.*v) # Elementwize multiplication to include spatial dependent mass density
+        energy_array[i] = e
+    end
+    return LinearInterpolation(energy_array, sol.t)
 
 end
 
