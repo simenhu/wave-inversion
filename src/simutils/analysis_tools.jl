@@ -32,7 +32,7 @@ function energy_of_coupled_wave_equations(sol, a, b)
     for i in eachindex(sol)
         u = sol[i].x[1]
         v = sol[i].x[2]
-
+        
         e = 1/2*dot(u, ɛ_r.*u) + 1/2*dot(v,μ_r.*v) # Elementwize multiplication to include spatial dependent mass density
         energy_array[i] = e
     end

@@ -1,4 +1,5 @@
-export second_order_to_first_order_system, second_to_first_order_initial_conditions, make_material_coefficients, internal_node_positions, make_initial_condition
+export second_order_to_first_order_system, second_to_first_order_initial_conditions,
+ make_material_coefficients, internal_node_positions, make_initial_condition, gausian_state
 
 using LinearAlgebra
 
@@ -50,3 +51,11 @@ function make_initial_condition(number_of_cells, initial_condition=nothing)
     v0 = zeros(number_of_cells)
     uv0 = ArrayPartition(u0,v0)
 end
+
+##
+function gausian_state(number_of_nodes, sigma, amplitude)
+    positions = 1:number_of_nodes
+    mean = div(number_of_nodes, 2)
+    amplitude/(2pi*sigma).*exp.(-0.5.*((positions.-mean) ./ sigma).^2)
+end
+
