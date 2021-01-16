@@ -26,7 +26,7 @@ end
 
 function energy_of_coupled_wave_equations(sol, a, b)
     ɛ_r = 1 ./ b 
-    μ_r = 2 ./ a
+    μ_r = 1 ./ a
 
     energy_array = zeros(length(sol))
     for i in eachindex(sol)

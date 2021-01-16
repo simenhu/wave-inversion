@@ -46,7 +46,7 @@ function energy_plot(sol, energy, sim_time, dx, time_res; solver_name="Nothing")
 
     # title_plot = plot(title = solver_name, grid = false, showaxis = false, bottom_margin = -200Plots.px)
     state_plot = heatmap(time_vector, (1:state_dim).*dx, simulated_sol, title = "simulated", ylabel="m")
-    energy_plot = plot(time_vector, energy_vector, title = "energy", ylabel="J")
+    energy_plot = plot(time_vector, energy_vector, title = "energy", ylabel="J", ylims=(0, 0.04))
     plot(state_plot, energy_plot, layout = (2, 1), size=(700, 500), link = :x, plot_title=solver_name, legend=false, xlabel="s")
 end
 

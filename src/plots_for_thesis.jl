@@ -52,7 +52,7 @@ b_coeffs =  make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 #     number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[50],
 #     pml_width=0)
 
-f = general_one_dimensional_wave_equation_with_parameters_non_staggered(string_length, 
+f = general_one_dimensional_wave_equation_with_parameters(string_length, 
     number_of_cells, Θ, excitation_func=[f_excitation], excitation_positions=[50], pml_width=0)
 
     prob = ODEProblem(f, u_0, sim_time, p=Θ)
