@@ -21,23 +21,12 @@ string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
 
-# Making inversion data
-
-# Defining constants for time property
-Δt = 0.001
-t_vector = sim_time[1]:Δt:sim_time[2]
-frequency = 50
-
-f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.03, 0.017)
-internal_positions = internal_node_positions(0, string_length, number_of_cells)
-
 ## Initial conditions
 u_0 = make_initial_condition(number_of_cells)
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 Θ = (a_coeffs, b_coeffs)
 
 ## Test with simpler function
-
 number_of_cells_2 = 628
 u_2 = sin.(internal_node_positions(0, 2*pi, number_of_cells_2))
 coeffs_2 = [1.0 for i in 1:number_of_cells_2]
@@ -49,10 +38,11 @@ function simple_adjont_test_function()
         return Ax*(Q*x)
     end
 end
+
 f_2 = simple_adjont_test_function()
 
-@profview global grad_coeff = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)), coeffs_2)[1]
-display(size(grad_coeff))
+# @profview global grad_coeff = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)), coeffs_2)[1]
+grad_coeff = Zygote.gradient(coeffs -> sum(f_2(u_2, coeffs)), coeffs_2)[1]
 
 ## The result from 
 res = f_2(u_2, coeffs_2)
