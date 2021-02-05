@@ -1,9 +1,10 @@
 push!(LOAD_PATH, "./src/simutils/")
-import Base: *
+import Base: *, adjoint
 using Zygote
 using Plots
 using FiniteDiff
 using FiniteDifferences
+import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk, Composite
 plotlyjs()
 
 struct DumbDerivativeOperator
@@ -20,6 +21,10 @@ function *(A::DumbDerivativeOperator, u::AbstractArray)
     (A.stencil_matrix.*A.scaling_array')*u
 end
 
+function adjoint(A::DumbDerivativeOperator)
+    (A.stencil_matrix.*A.scaling_array')'
+end
+
 
 function du(c, x)
     A = DumbDerivativeOperator(c)
@@ -27,6 +32,34 @@ function du(c, x)
     # display(A.scaling_array)
     A*x
 end
+
+"""
+Rule for the product of an DerivativeOperator and an AbstractArray
+"""
+function rrule(::typeof(*), A::DumbDerivativeOperator, M::AbstractArray)
+    Ώ = A*M
+    
+    function mul_pullback(ΔΏ)
+        # ∂A = @thunk(ΔΏ*M')
+        ∂A = ΔΏ*M'
+        # ∂M = @thunk(A_sparse'*ΔΏ)
+        ∂M = A'*ΔΏ
+        # @infiltrate
+        return (NO_FIELDS, ∂A, ∂M)
+    end
+    return Ώ, mul_pullback 
+end
+
+function rrule(::Type{DumbDerivativeOperator}, c)
+    A = DumbDerivativeOperator(c)
+    function DumbDerivativeOperator_pullback(ΔΏ)
+        ∂c = diag(ΔΏ).*diag(A)
+        return (NO_FIELDS, ∂c)
+    end
+    return  A, DumbDerivativeOperator_pullback
+end
+
+
 
 ## Define dummy example
 vector_size = 10
