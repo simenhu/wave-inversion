@@ -35,6 +35,7 @@ function simple_adjont_test_function()
     function du(x, coeffs)
         Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
         Q = Dirichlet0BC(Float64)
+        @infiltrate
         return Ax*(Q*x)
     end
 end

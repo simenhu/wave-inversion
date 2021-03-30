@@ -35,9 +35,11 @@ u_0 = make_initial_condition(number_of_cells)
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
 # a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 
+p = [a_coeffs b_coeffs]
+
 ## Define ODE function
-f = general_one_dimensional_wave_equation(string_length, number_of_cells, a_coeffs, b_coeffs, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
-prob = ODEProblem(f, u_0, sim_time)
+f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, p, excitation_func=[f_excitation], excitation_positions=[100], pml_width=60)
+prob = ODEProblem(f, u_0, sim_time, p)
 
 ## Simulate
 to = TimerOutput()
@@ -48,10 +50,10 @@ sol = @timeit to "simulation" solve(prob, solver)
 # sol = @benchmark solve(prob, solver, save_everystep=false)
 
 ## plot image of state compared with analytical solution
-energy = energy_of_string(sol, string_length, number_of_cells, a_coeffs, T)
+energy = energy_of_coupled_wave_equations(sol, a_coeffs, b_coeffs)
 root_squared_error(x1, x2) = vec(sum(sqrt.((x1-x2).^2), dims=1))
-excitation_energy_plot(sol, energy, f_excitation, sim_time, 0.0005, solver_name = repr(solver))
-display(to)
+p1 = excitation_energy_plot(sol, energy, f_excitation, sim_time, dx, 0.0005, solver_name = repr(solver))
+display(p1)
 
 ## make animation
 materials = zeros(100, length(internal_positions))
