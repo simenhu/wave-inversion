@@ -57,8 +57,10 @@ end
 
 function rrule(::Type{DumbDerivativeOperator}, c)
     A = DumbDerivativeOperator(c)
+    D = A.stencil_matrix
     function DumbDerivativeOperator_pullback(ΔΏ)
-        ∂c = diag(ΔΏ).*diag(A)
+        # ∂c = diag(ΔΏ).*diag(A)
+        ∂c = diag(D'*ΔΏ)
         # @infiltrate
         return (NO_FIELDS, ∂c)
     end
