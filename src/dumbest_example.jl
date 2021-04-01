@@ -11,13 +11,23 @@ import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk, Composite
 using Infiltrator
 plotlyjs()
 
+"""
+    DumbDerivativeOperator(D::AbstractArray, C::AbstractArray)
+
+Represent simplified version of Difference operators from DiffEqOperators.jl
+
+C should be a coloumn vector
+
+# Examples
+
+A = DumbDerivativeOperator([5. 5.; 6. 6.],[5., 6.])
+
+"""
 struct DumbDerivativeOperator
     stencil_matrix::AbstractArray
     scaling_array::AbstractArray
 end
 
-
-A = DumbDerivativeOperator([5. 5.; 6. 6.],[5. 6.])
 
 DumbDerivativeOperator(c) = DumbDerivativeOperator(UpperTriangular(ones(length(c), length(c))), c)
 
@@ -32,10 +42,10 @@ end
 function adjoint(A::DumbDerivativeOperator)
     (A.stencil_matrix.*A.scaling_array')'
 end
-
-function diag(A::DumbDerivativeOperator)
-    diag(A.stencil_matrix).*A.scaling_array
-end
+# 
+# function diag(A::DumbDerivativeOperator)
+    # diag(A.stencil_matrix).*A.scaling_array
+# end
 
 size(x::DumbDerivativeOperator) = size(x.stencil_matrix)
 
@@ -67,12 +77,14 @@ function rrule(::Type{DumbDerivativeOperator}, c)
     return  A, DumbDerivativeOperator_pullback
 end
 
+
 function du(c, x) 
     A = DumbDerivativeOperator(c)
     # display(A.stencil_matrix)
     # display(A.scaling_array)
     A*x
 end
+
 
 
 ## Define dummy example
