@@ -7,7 +7,6 @@ using Plots
 using LinearAlgebra
 using Infiltrator
 using Profile
-using FiniteDiff
 using FiniteDifferences
 using ForwardDiff
 plotlyjs()
@@ -15,9 +14,9 @@ plotlyjs()
 ## Test with simpler function
 number_of_cells_2 = 628
 dx = 0.01
-u_2 = sin.(internal_node_positions(0, 2*pi, number_of_cells_2))
-# coeffs_2 = [1.0 for i in 1:number_of_cells_2]
-coeffs_2 = u_2 = cos.(2 .* internal_node_positions(0, 2*pi, number_of_cells_2))
+u_2 = sin.(internal_node_positions(0, 2*pi, number_of_cells_2+2))[2:end-1]
+# coeffs_2 = Array(range(1., 4., length=number_of_cells_2))
+coeffs_2 = sin.(internal_node_positions(0, 4*pi, number_of_cells_2+2))[2:end-1]
 
 function du(x, coeffs)
     Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
@@ -26,30 +25,66 @@ function du(x, coeffs)
     return Ax*(Q*x)
 end
 
+## Analyticall gradients
 
-## The result from 
-res = du(u_2, coeffs_2)
-res2 = du(u_2, coeffs_2.*2)
-plot(res)
-display(plot!(res2))
+"Calculate gradient of states given coeficcient vector"
+function analytical_state_grad(coeffs)
+    # Does this since we never want the derivative of the coefficient at the end or
+    # the boundary conditions
+    D = Array(RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, 1.0))[:, 2:end-1]
+    rows, columns = size(D) 
+    grad = zeros(columns)
+    for n in 1:columns
+        row_sum = 0.0
+        for m in 1:rows
+            row_sum += D[m, n]*coeffs[m]
+        end
+        grad[n] = row_sum
+    end
+    return grad
+end
 
-## Test derivatives
+"Calculate gradient of coefficients given state vector"
+function analytical_coeff_grad(state)
+    # Does this since we never want the derivative of the coefficient at the end or
+    # the boundary conditions
+    D = Array(RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, 1.0))[:, 2:end-1]
+    rows, columns = size(D) 
+    grad = zeros(rows)
+    for m in 1:rows
+        col_sum = 0.0
+        for n in 1:columns
+            col_sum += D[m, n]*state[n]
+        end
+        grad[m] = col_sum
+    end
+    return grad
+end
 
-# @profview global grad_coeff = Zygote.gradient(coeffs -> sum(du(u_2, coeffs)), coeffs_2)[1]
-grad_coeff = Zygote.gradient(coeffs -> sum(du(u_2, coeffs)), coeffs_2)[1]
-finite_grad_coeff = grad(central_fdm(5,1), coeffs -> sum(du(u_2, coeffs)), coeffs_2)[1]
-# forward_coeff = ForwardDiff.gradient(coeffs -> sum(du(u_2, coeffs)), coeffs_2)
+coeff_analytical = analytical_coeff_grad(u_2)
+state_analytical = analytical_state_grad(coeffs_2)
 
-grad_state = Zygote.gradient(u -> sum(du(u, coeffs_2)), u_2)[1]
-finite_grad_state = grad(central_fdm(5,1), u -> sum(du(u, coeffs_2)), u_2)[1]
-forward_state = ForwardDiff.gradient(u -> sum(du(u, coeffs_2)), u_2)
+## Gradient wrt. coefficients
+coeff_func = coeffs -> sum(du(u_2, coeffs))
 
-## Plot finite gradient compared to AD gradient
-p1 = plot(grad_coeff, label="coeff - zygote")
-p2 = plot!(finite_grad_coeff, label="coeff - finite diff")
-# p3 = plot!(forward_coeff, label="coeff - forward diff")
+coeff_zygote = Zygote.gradient(coeff_func, coeffs_2)[1]
+coeff_difference = grad(central_fdm(5,1), coeff_func, coeffs_2)[1]
 
-p4 = plot(grad_state, label="state - zygote")
-p5 = plot!(finite_grad_state, label="state - finite difference")
-p6 = plot!(forward_state, label="state - forward")
-display(plot(p1, p6, layout=(2,1), size=(700, 700)))
+## Gradient wrt. state
+state_func = u -> sum(du(u, coeffs_2))
+
+state_zygote = Zygote.gradient(state_func, u_2)[1]
+state_difference = grad(central_fdm(2, 1), state_func, u_2)[1]
+state_forward = ForwardDiff.gradient(state_func, u_2)
+
+## Plot gradients
+p1 = plot(coeff_zygote, label="coeff - zygote")
+plot!(coeff_difference, label="coeff - finite diff")
+# plot!(forward_coeff, label="coeff - forward diff")
+plot!(coeff_analytical, label="coeff - analytical")
+
+p2 = plot(state_zygote, label="state - zygote")
+plot!(state_difference, label="state - finite difference")
+plot!(state_forward, label="state - forward")
+plot!(state_analytical, label="state - analytical")
+display(plot(p1, p2, layout=(2,1), size=(700, 700)))

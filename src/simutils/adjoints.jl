@@ -64,11 +64,8 @@ function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximati
     # array. To get the pullback for the coefficient whe have to divide the pullback
     # with the elements in DerivatorOperator with 1.0 coefficients
     function RightStaggeredDifference_pullback(ΔΏ)
-        ∂c = diag(_A'*ΔΏ)[2:end-1]
-        # ∂c = diag(_A\ΔΏ)
-        # ∂c = diag(_A[:,2:end-1]\ΔΏ[:,2:end-1])
-        # ∂c = ΔΏ[:,2:end-1]'./diag(_A[:,2:end-1])
-        # ∂c = diag(ΔΏ[:,2:end-1]./diag(_A[:,2:end-1]))
+        ∂c = diag(ΔΏ*_A')
+        
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, RightStaggeredDifference_pullback
@@ -83,10 +80,8 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     # array. To get the pullback for the coefficient whe have to divide the pullback
     # with the elements in DerivatorOperator with 1.0 coefficients
     function LeftStaggeredDifference_pullback(ΔΏ)
-        ∂c = diag(_A'*ΔΏ)[2:end-1]
-        # ∂c = diag(_A\ΔΏ)
-        # ∂c = diag(_A[:,2:end-1]\ΔΏ[:,2:end-1])
-        # ∂c = diag(ΔΏ[:,2:end-1])./diag(_A[:,2:end-1])
+        ∂c = diag(ΔΏ*_A')
+
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, LeftStaggeredDifference_pullback
