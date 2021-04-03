@@ -4,7 +4,6 @@ import LinearAlgebra: diag, Array
 using LinearAlgebra
 using Zygote
 using Plots
-using FiniteDiff
 using FiniteDifferences
 using ForwardDiff
 import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk, Composite
@@ -32,15 +31,16 @@ end
 DumbDerivativeOperator(c) = DumbDerivativeOperator(UpperTriangular(ones(length(c), length(c))), c)
 
 function show(io::IO, ::MIME"text/plain", x::DumbDerivativeOperator)
-    show(io, "text/plain", Array(x.stencil_matrix.*x.scaling_array')) 
+    show(io, "text/plain", Array(x.stencil_matrix.*x.scaling_array)) 
 end
 
 function *(A::DumbDerivativeOperator, u::AbstractArray)
-    (A.stencil_matrix.*A.scaling_array')*u
+    (A.stencil_matrix.*A.scaling_array)*u
+    # @infiltrate
 end
 
 function adjoint(A::DumbDerivativeOperator)
-    (A.stencil_matrix.*A.scaling_array')'
+    (A.stencil_matrix.*A.scaling_array)'
 end
 # 
 # function diag(A::DumbDerivativeOperator)
@@ -69,8 +69,7 @@ function rrule(::Type{DumbDerivativeOperator}, c)
     A = DumbDerivativeOperator(c)
     D = A.stencil_matrix
     function DumbDerivativeOperator_pullback(ΔΏ)
-        # ∂c = diag(ΔΏ).*diag(A)
-        ∂c = diag(D'*ΔΏ)
+        ∂c = diag(ΔΏ*D')
         # @infiltrate
         return (NO_FIELDS, ∂c)
     end
