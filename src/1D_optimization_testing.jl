@@ -8,11 +8,10 @@ using Plots
 using DataInterpolations
 using TimerOutputs
 using BenchmarkTools
-import ChainRules
 
 plotlyjs()
 
-using DelimitedFiles,Plots
+using DelimitedFiles, Plots
 using DiffEqSensitivity, Zygote, Flux, DiffEqFlux, Optim
 
 using Simutils

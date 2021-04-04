@@ -59,10 +59,13 @@ constants of Cx. Cx has the spatially dependent constants allong it's diagonal.
 function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximation_order, dx, len, coeff_func)
     A = RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)
     _A = SparseMatrixCSC(RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0))
-    # The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
-    # coefficients where each column is scaled with a coefficient from a coefficient
-    # array. To get the pullback for the coefficient whe have to divide the pullback
-    # with the elements in DerivatorOperator with 1.0 coefficients
+    
+    """
+    The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
+    coefficients where each column is scaled with a coefficient from a coefficient
+    array. To get the pullback for the coefficient whe have to divide the pullback
+    with the elements in DerivatorOperator with 1.0 coefficients
+    """
     function RightStaggeredDifference_pullback(ΔΏ)
         ∂c = diag(ΔΏ*_A')
         
@@ -75,10 +78,12 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     A = LeftStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)
     _A = SparseMatrixCSC(LeftStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0))
     
-    # The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
-    # coefficients where each column is scaled with a coefficient from a coefficient
-    # array. To get the pullback for the coefficient whe have to divide the pullback
-    # with the elements in DerivatorOperator with 1.0 coefficients
+    """
+    The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
+    coefficients where each column is scaled with a coefficient from a coefficient
+    array. To get the pullback for the coefficient whe have to divide the pullback
+    with the elements in DerivatorOperator with 1.0 coefficients
+    """
     function LeftStaggeredDifference_pullback(ΔΏ)
         ∂c = diag(ΔΏ*_A')
 
