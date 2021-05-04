@@ -92,3 +92,16 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     return A, LeftStaggeredDifference_pullback
 end
 
+
+"""
+Reverse rule for the vector_excitation function used to excitate the the states in
+the simulation models.
+"""
+function rrule(::typeof(vector_excitation), a, positions, function_array, t)
+    Ω = vector_excitation(a, positions, function_array, t)
+    function excitation_pullback(ΔΩ)
+        ∂a = ΔΩ
+        return (NO_FIELDS, ∂a, DoesNotExist(), DoesNotExist(), DoesNotExist())
+    end
+    return Ω, excitation_pullback 
+end
