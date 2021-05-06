@@ -1,6 +1,4 @@
-export  string_with_coefficients!, string_with_coefficients_and_PML!, general_one_dimensional_wave_equation, 
-general_one_dimensional_wave_equation_with_parameters!, general_one_dimensional_wave_equation_with_parameters,
-general_one_dimensional_wave_equation_with_parameters_non_staggered
+export  general_one_dimensional_wave_equation_with_parameters, vector_excitation
 
 using DiffEqOperators
 using RecursiveArrayTools
@@ -27,11 +25,10 @@ end
 Add values to the positions of the vector a. This function is made to enable making a
 rrule from ChainRules.jl for the excitation of the wave simulation models.
 """
-function vector_excitation(a, positions, function_array, t)
-    for i in eachindex(positions)
-        a[positions[i]] = a[positions[i]] + function_array[i](t)
-    end
-    a
+function vector_excitation(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
+    
+    excitation = @ignore sparsevec(positions, [function_array[i](t) for i in 1:length(positions)], length(a))
+    return a + excitation
 end
 
 
@@ -45,12 +42,8 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         u = @view state.x[1][:]
         v = @view state.x[2][:]
 
-
         a_coeffs = p[:,1]
         b_coeffs = p[:,2]
-
-        # a_coeffs = p
-        # b_coeffs = p
     
         A_xv = LeftStaggeredDifference{1}(1, 2, dx, internal_nodes, b_coeffs)
         A_xu = RightStaggeredDifference{1}(1, 2, dx, internal_nodes, a_coeffs)
