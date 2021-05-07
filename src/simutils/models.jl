@@ -4,7 +4,7 @@ using DiffEqOperators
 using RecursiveArrayTools
 using DifferentialEquations
 using OrdinaryDiffEq
-using Zygote: @ignore
+using Zygote: @ignore, Buffer
 using Infiltrator
 using Profile
 using Plots
@@ -31,6 +31,24 @@ function vector_excitation(a, positions::AbstractArray{T}, function_array, t) wh
     return a + excitation
 end
 
+"""
+Add values to the positions of the vector a. This function uses the Zygote.Buffer
+object to enable calculating gradients through the mutation of an array like object.
+"""
+function vector_excitation2(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
+    buf = Buffer(a, length(a))
+    
+    for i in eachindex(a)
+        buf[i] = zero(a[1])
+    end
+
+    for i in eachindex(positions)
+        buf[positions[i]] = function_array[i](t)
+    end
+
+    return a + copy(buf)
+end
+
 
 function general_one_dimensional_wave_equation_with_parameters(domain, internal_nodes; function_array, excitation_positions, pml_width)
     
@@ -50,7 +68,7 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        u = vector_excitation(u, excitation_positions, function_array, t)
+        u = vector_excitation2(u, excitation_positions, function_array, t)
 
         # first equation
         du = A_xv*(Q_v*v) - u.*pml_coeffs
