@@ -21,7 +21,6 @@ coeffs_2 = sin.(internal_node_positions(0, 4*pi, number_of_cells_2+2))[2:end-1]
 function du(x, coeffs)
     Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
     Q = Dirichlet0BC(Float64)
-    # @infiltrate
     return Ax*(Q*x)
 end
 
@@ -69,6 +68,7 @@ coeff_func = coeffs -> sum(du(u_2, coeffs))
 
 coeff_zygote = Zygote.gradient(coeff_func, coeffs_2)[1]
 coeff_difference = grad(central_fdm(5,1), coeff_func, coeffs_2)[1]
+coeff_forward = ForwardDiff.gradient(coeff_func, coeffs_2)
 
 ## Gradient wrt. state
 state_func = u -> sum(du(u, coeffs_2))
@@ -80,7 +80,7 @@ state_forward = ForwardDiff.gradient(state_func, u_2)
 ## Plot gradients
 p1 = plot(coeff_zygote, label="coeff - zygote")
 plot!(coeff_difference, label="coeff - finite diff")
-# plot!(forward_coeff, label="coeff - forward diff")
+plot!(coeff_forward, label="coeff - forward diff")
 plot!(coeff_analytical, label="coeff - analytical")
 
 p2 = plot(state_zygote, label="state - zygote")

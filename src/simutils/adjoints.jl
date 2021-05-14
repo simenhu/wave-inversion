@@ -66,9 +66,8 @@ function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximati
     array. To get the pullback for the coefficient whe have to divide the pullback
     with the elements in DerivatorOperator with 1.0 coefficients
     """
-    function RightStaggeredDifference_pullback(ΔΏ)
-        ∂c = diag(ΔΏ*_A')
-        
+    function RightStaggeredDifference_pullback(ΔΩ)
+        ∂c = diag(ΔΩ*_A')
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, RightStaggeredDifference_pullback
@@ -84,8 +83,8 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     array. To get the pullback for the coefficient whe have to divide the pullback
     with the elements in DerivatorOperator with 1.0 coefficients
     """
-    function LeftStaggeredDifference_pullback(ΔΏ)
-        ∂c = diag(ΔΏ*_A')
+    function LeftStaggeredDifference_pullback(ΔΩ)
+        ∂c = diag(ΔΩ*_A')
 
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
@@ -97,11 +96,24 @@ end
 Reverse rule for the vector_excitation function used to excitate the the states in
 the simulation models.
 """
-function rrule(::typeof(vector_excitation), a, positions, function_array, t)
-    Ω = vector_excitation(a, positions, function_array, t)
-    function excitation_pullback(ΔΩ)
-        ∂a = ΔΩ
-        return (NO_FIELDS, ∂a, DoesNotExist(), DoesNotExist(), DoesNotExist())
-    end
-    return Ω, excitation_pullback 
+# function rrule(::typeof(vector_excitation), a, positions, function_array, t)
+#     Ω = vector_excitation(a, positions, function_array, t)
+#     function excitation_pullback(ΔΩ)
+#         ∂a = ΔΩ
+#         return (NO_FIELDS, ∂a, DoesNotExist(), DoesNotExist(), DoesNotExist())
+#     end
+#     return Ω, excitation_pullback 
+# end
+
+"""
+Method for non-allocation multiplication of the sort ΔΏ*_A', ideally mathcing the
+operation diag(ΔΏ*_A')
+"""
+function left_multiply_adjoint()
+end
+
+"""
+Method for non-allocation multiplication of the sort A_sparse'*ΔΏ
+"""
+function right_multiply_adjoint()
 end

@@ -57,11 +57,11 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
 
 
     function du_func(state, p, t)
-        u = @view state.x[1][:]
-        v = @view state.x[2][:]
+        u = @view state.x[1][:] # Electric field
+        v = @view state.x[2][:] # Magnetic field
 
-        a_coeffs = p[:,1]
-        b_coeffs = p[:,2]
+        a_coeffs = p[:,1] # 1/μ (1/permeability)
+        b_coeffs = p[:,2] # 1/ϵ (1/permittivity)
     
         A_xv = LeftStaggeredDifference{1}(1, 2, dx, internal_nodes, b_coeffs)
         A_xu = RightStaggeredDifference{1}(1, 2, dx, internal_nodes, a_coeffs)

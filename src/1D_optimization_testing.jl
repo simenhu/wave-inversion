@@ -19,7 +19,7 @@ using Simutils
 ## Defining constants for string property
 T = 100.0 # N
 μ = 0.01 # Kg/m
-sim_time = (0.0, 0.05)
+sim_time = (0.0, 0.07)
 string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
@@ -43,7 +43,7 @@ b_coeffs = copy(a_coeffs)
 
 
 ## Define ODE function
-f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[314], pml_width=60)
+f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[200], pml_width=60)
 prob = ODEProblem(f, u_0, sim_time, p=Θ)
 
 ## Simulate
@@ -56,11 +56,12 @@ sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ)
 heatmap(sol[:,:])
 display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
-## Optimization part
+## Calculate gradients
+a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
+b_coeffs_start = copy(a_coeffs)
+Θ_start =  hcat(a_coeffs_start, b_coeffs_start)
 
 solution_time = sol.t
-Θ_start = copy(Θ).*0.9
-
 function predict(Θ)
     Array(solve(prob, solver, p=Θ, saveat=solution_time))
 end
