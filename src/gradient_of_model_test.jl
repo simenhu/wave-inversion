@@ -53,12 +53,15 @@ display(p1)
 
 parameter_grad_forward = ForwardDiff.gradient(coefficient_func, Θ)
 parameter_grad_zygote = Zygote.gradient(coefficient_func, Θ)[1]
-# parameter_grad_finite = grad(central_fdm(2, 1), coefficient_func, Θ)[1]
+parameter_grad_finite = grad(central_fdm(2, 1), coefficient_func, Θ)[1]
 
 p2 = plot(parameter_grad_forward[:, 1], label="a-coeff - ForwardDiff")
 plot!(parameter_grad_zygote[:, 1], label="a-coeff - zygote")
+plot!(parameter_grad_finite[:, 1], label="a-coeff - FiniteDifferences")
+
 p3 = plot(parameter_grad_forward[:, 2], label="b-coeff - ForwardDiff")
 plot!(parameter_grad_zygote[:, 2], label="b-coeff - zygote")
-# plot!(parameter_grad_finite, label="parameter - finite")
+plot!(parameter_grad_finite[:, 2], label="b-coeff - FiniteDifferences")
+
 display(p2)
 display(p3)
