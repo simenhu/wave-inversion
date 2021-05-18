@@ -19,7 +19,7 @@ coeffs = sin.(internal_node_positions(0, 4*pi, number_of_cells_2+2))[2:end-1]
 
 
 ## Calculate the result using the concretizised matrix version of A
-Ax = CenteredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
+Ax = RightStaggeredDifference{1}(1, 4, dx, number_of_cells_2, coeffs)
 Q = Dirichlet0BC(Float64)
 
 Ax_array = Array(Ax)

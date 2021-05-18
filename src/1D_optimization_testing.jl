@@ -49,7 +49,7 @@ prob = ODEProblem(f, u_0, sim_time, p=Θ)
 ## Simulate
 to = TimerOutput()
 solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(), KenCarp4()]
-solver = solvers[1]
+solver = solvers[6]
 
 sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ)
 # bench = @benchmark solve(prob, solver, save_everystep=false, p=Θ)
@@ -57,13 +57,13 @@ heatmap(sol[:,:])
 display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
 ## Calculate gradients
-a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
+a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.5], [[1], [400]])
 b_coeffs_start = copy(a_coeffs)
 Θ_start =  hcat(a_coeffs_start, b_coeffs_start)
 
 solution_time = sol.t
 function predict(Θ)
-    Array(solve(prob, solver, p=Θ, saveat=solution_time))
+    Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=ReverseDiffAdjoint()))
 end
 
 function error_loss(Θ)

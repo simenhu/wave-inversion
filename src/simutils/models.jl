@@ -22,32 +22,22 @@ function dampening_coefficients(number_of_cells, dampning_width; max_value=1., o
 end
 
 """
-Add values to the positions of the vector a. This function is made to enable making a
-rrule from ChainRules.jl for the excitation of the wave simulation models.
+Makes a vector with the current density for excitation of the system.
 """
-function vector_excitation(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
-    
-    excitation = @ignore sparsevec(positions, [function_array[i](t) for i in 1:length(positions)], length(a))
-    return a + excitation
-end
-
-"""
-Add values to the positions of the vector a. This function uses the Zygote.Buffer
-object to enable calculating gradients through the mutation of an array like object.
-"""
-function vector_excitation2(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
+function excitation_density(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
     buf = Buffer(a, length(a))
     
     for i in eachindex(a)
-        buf[i] = zero(a[1])
+        buf[i] = zero(eltype(a))
     end
 
     for i in eachindex(positions)
         buf[positions[i]] = function_array[i](t)
     end
 
-    return a + copy(buf)
+    return copy(buf)
 end
+
 
 
 function general_one_dimensional_wave_equation_with_parameters(domain, internal_nodes; function_array, excitation_positions, pml_width)
@@ -68,10 +58,10 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         Q_v = Dirichlet0BC(Float64)
         Q_u = Dirichlet0BC(Float64)
 
-        u = vector_excitation2(u, excitation_positions, function_array, t)
+        J = excitation_density(u, excitation_positions, function_array, t)
 
         # first equation
-        du = A_xv*(Q_v*v) - u.*pml_coeffs
+        du = A_xv*(Q_v*v) - b_coeffs.*J - u.*pml_coeffs
 
         # second equation
         dv = A_xu*(Q_u*u) - v.*pml_coeffs
