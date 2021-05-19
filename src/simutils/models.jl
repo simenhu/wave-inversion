@@ -47,8 +47,12 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
 
 
     function du_func(state, p, t)
-        u = @view state.x[1][:] # Electric field
-        v = @view state.x[2][:] # Magnetic field
+        len_state = length(state)
+        u_indexes = 1:div(len_state, 2)
+        v_indexes = div(len_state, 2)+1:len_state
+
+        u = @view state[u_indexes] # Electric field
+        v = @view state[v_indexes] # Magnetic field
 
         a_coeffs = p[:,1] # 1/μ (1/permeability)
         b_coeffs = p[:,2] # 1/ϵ (1/permittivity)
@@ -66,7 +70,14 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         # second equation
         dv = A_xu*(Q_u*u) - v.*pml_coeffs
 
-        return ArrayPartition(du, dv)
+        # Using buffer instead off ArrayPartition to create return vector
+        buf = Buffer(state, len_state)
+        buf[u_indexes] = du
+        buf[v_indexes] = dv
+
+        # return ArrayPartition(du, dv) # Actually want to do it like this, but
+        # doesnt work with Zygote yet
+        return copy(buf)
     end
     return du_func
 end

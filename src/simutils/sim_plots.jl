@@ -75,7 +75,7 @@ function animate_solution(sol, a_coeffs, b_coeffs, sim_time, time_resolution)
     min_value = minimum(sol[:,:])
 
     anim = @gif for t = sim_time[1]:time_resolution:sim_time[2]
-        plot(internal_positions, sol(t).x[1], legend=true, ylims=(min_value, max_value), label=string(t))
+        plot(internal_positions, sol(t)[1:internal_nodes], legend=true, ylims=(min_value, max_value), label=string(t))
         heatmap!(internal_positions,range(0, max_value, length=material_height_samples), a_materials) # plotting a_coeffs on top
         heatmap!(internal_positions,range(min_value, 0, length=material_height_samples), b_materials) # plotting b_coeffs on bottom
     end

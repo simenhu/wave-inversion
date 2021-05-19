@@ -2,6 +2,7 @@ export second_order_to_first_order_system, second_to_first_order_initial_conditi
  make_material_coefficients, internal_node_positions, make_initial_condition, gausian_state
 
 using LinearAlgebra
+using Zygote
 
 function second_order_to_first_order_system(A)
     if !(ndims(A)==2 && size(A)[1]==size(A)[2])
@@ -49,7 +50,11 @@ function make_initial_condition(number_of_cells, initial_condition=nothing)
         u0 = initial_condition
     end
     v0 = zeros(number_of_cells)
-    uv0 = ArrayPartition(u0,v0)
+    # uv0 = ArrayPartition(u0,v0)
+    buff = Zygote.Buffer(u0, 2*number_of_cells)
+    buff[1:number_of_cells] = u0
+    buff[number_of_cells+1:2*number_of_cells] = v0
+    return copy(buff)
 end
 
 ##

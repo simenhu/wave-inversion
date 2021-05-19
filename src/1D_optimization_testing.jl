@@ -57,13 +57,13 @@ heatmap(sol[:,:])
 display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
 ## Calculate gradients
-a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.5], [[1], [400]])
-b_coeffs_start = copy(a_coeffs)
+a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
+b_coeffs_start = copy(a_coeffs_start)
 Θ_start =  hcat(a_coeffs_start, b_coeffs_start)
 
 solution_time = sol.t
 function predict(Θ)
-    Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=ReverseDiffAdjoint()))
+    Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=ZygoteAdjoint()))
 end
 
 function error_loss(Θ)
@@ -102,7 +102,8 @@ end
 
 ## test gradient of loss
 # @profview global grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)
-grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
+# grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
+grad_coeff = Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
 p1 = plot(grad_coeff[1][:,1], label="a_coeffs")
 p2 = plot!(grad_coeff[1][:, 2], label="b_coeffs")
 display(p2)
