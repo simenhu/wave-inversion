@@ -6,6 +6,8 @@ using Infiltrator
 
 export rrule
 
+using Infiltrator
+
 """
 Rule for the product of an DerivativeOperator and an AbstractArray
 """
@@ -15,6 +17,7 @@ function rrule(::typeof(*), A::DerivativeOperator, M::AbstractArray)
     function mul_pullback(ΔΏ)
         ∂A = @thunk(ΔΏ*M')
         ∂M = @thunk(A_sparse'*ΔΏ)
+        @infiltrate
         return (NO_FIELDS, ∂A, ∂M)
     end
     return Ώ, mul_pullback 
@@ -58,7 +61,7 @@ constants of Cx. Cx has the spatially dependent constants allong it's diagonal.
 """
 function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximation_order, dx, len, coeff_func)
     A = RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)
-    _A = SparseMatrixCSC(RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0))
+    _D = RightStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0)
     
     """
     The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
@@ -67,7 +70,8 @@ function rrule(::Type{<:RightStaggeredDifference}, derivative_order, approximati
     with the elements in DerivatorOperator with 1.0 coefficients
     """
     function RightStaggeredDifference_pullback(ΔΩ)
-        ∂c = diag(ΔΩ*_A')
+        # ∂c = diag(ΔΩ*_A')
+        ∂c = right_multiply_diag_transpose(ΔΩ, _D)
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, RightStaggeredDifference_pullback
@@ -75,7 +79,7 @@ end
 
 function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximation_order, dx, len, coeff_func)
     A = LeftStaggeredDifference{1}(derivative_order, approximation_order, dx, len, coeff_func)
-    _A = SparseMatrixCSC(LeftStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0))
+    _D = LeftStaggeredDifference{1}(derivative_order, approximation_order, dx, len, 1.0)
     
     """
     The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
@@ -84,36 +88,11 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     with the elements in DerivatorOperator with 1.0 coefficients
     """
     function LeftStaggeredDifference_pullback(ΔΩ)
-        ∂c = diag(ΔΩ*_A')
-
+        # ∂c = diag(ΔΩ*_A')
+        ∂c = right_multiply_diag_transpose(ΔΩ, _D)
         return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist(), ∂c)
     end
     return A, LeftStaggeredDifference_pullback
 end
 
 
-"""
-Reverse rule for the vector_excitation function used to excitate the the states in
-the simulation models.
-"""
-# function rrule(::typeof(vector_excitation), a, positions, function_array, t)
-#     Ω = vector_excitation(a, positions, function_array, t)
-#     function excitation_pullback(ΔΩ)
-#         ∂a = ΔΩ
-#         return (NO_FIELDS, ∂a, DoesNotExist(), DoesNotExist(), DoesNotExist())
-#     end
-#     return Ω, excitation_pullback 
-# end
-
-"""
-Method for non-allocation multiplication of the sort ΔΏ*_A', ideally mathcing the
-operation diag(ΔΏ*_A')
-"""
-function left_multiply_adjoint()
-end
-
-"""
-Method for non-allocation multiplication of the sort A_sparse'*ΔΏ
-"""
-function right_multiply_adjoint()
-end

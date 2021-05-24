@@ -8,6 +8,7 @@ using Zygote: @ignore, Buffer
 using Infiltrator
 using Profile
 using Plots
+using Tracker
 
 """
 Returns an array with length equal to number of cells, with a quadratic ramp function
@@ -25,7 +26,7 @@ end
 Makes a vector with the current density for excitation of the system.
 """
 function excitation_density(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
-    buf = Buffer(a, length(a))
+    buf = Buffer(a, eltype(a), length(a))
     
     for i in eachindex(a)
         buf[i] = zero(eltype(a))
