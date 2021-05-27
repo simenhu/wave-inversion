@@ -1,4 +1,4 @@
-export  general_one_dimensional_wave_equation_with_parameters, vector_excitation
+export  general_one_dimensional_wave_equation_with_parameters, vector_excitation, wave_equation_system_matrix
 
 using DiffEqOperators
 using RecursiveArrayTools
@@ -72,6 +72,27 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
 
         return [du; dv]
     end
-    return du_func
+
+
+    return du_func, system_matrix
 end
 
+function wave_equation_system_matrix(domain, internal_nodes, p, order=2)
+    
+    dx = domain/(internal_nodes+1)
+
+    a_coeffs = p[:,1] # 1/μ (1/permeability)
+    b_coeffs = p[:,2] # 1/ϵ (1/permittivity)
+
+    squared_size = internal_nodes + 2
+
+    A_xv = zeros(squared_size, squared_size)
+    A_xu = zeros(squared_size, squared_size)
+
+    # @infiltrate
+
+    A_xv[2:end-1, :] = Array(LeftStaggeredDifference{1}(1, order, dx, internal_nodes, b_coeffs))
+    A_xu[2:end-1, :] = Array(RightStaggeredDifference{1}(1, order, dx, internal_nodes, a_coeffs))
+
+    return [I*0.0 Array(A_xu); Array(A_xv) I*0.0], Array(A_xv), Array(A_xu)
+end
