@@ -23,6 +23,9 @@ sim_time = (0.0, 0.07)
 string_length = 2*pi
 dx = 0.01
 number_of_cells = Int(div(string_length, dx))
+dt = 0.0001
+abstol = 1e-8
+reltol = 1e-8
 
 ## Making inversion data
 # Defining constants for time property
@@ -43,27 +46,29 @@ b_coeffs = copy(a_coeffs)
 
 
 ## Define ODE function
-f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[200], pml_width=60)
+f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[310], pml_width=60)
 prob = ODEProblem(f, u_0, sim_time, p=Θ)
 
 ## Simulate
 to = TimerOutput()
-solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(), KenCarp4()]
-solver = solvers[6]
+solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(), KenCarp4(), ORK256(), ParsaniKetchesonDeconinck3S32()]
+solver = solvers[8]
 
-sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ)
+sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ, abstol=abstol, reltol=reltol, dt=dt)
 # bench = @benchmark solve(prob, solver, save_everystep=false, p=Θ)
-heatmap(sol[:,:])
-display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
+# display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
 ## Calculate gradients
-a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
+# a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
+a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ)*1.01], [[1]])
 b_coeffs_start = copy(a_coeffs_start)
 Θ_start =  hcat(a_coeffs_start, b_coeffs_start)
 
+wrong_sol = solve(prob, solver, save_everystep=true, p=Θ_start, abstol=abstol, reltol=reltol, dt=dt)
+
 solution_time = sol.t
 function predict(Θ)
-    Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=BacksolveAdjoint()))
+    Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=InterpolatingAdjoint(),  abstol=abstol, reltol=reltol, dt=dt))
 end
 
 function error_loss(Θ)
@@ -102,16 +107,34 @@ end
 
 ## test gradient of loss
 # @profview global grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)
-grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start) 
-p1 = plot(grad_coeff[1][:,1], label="a_coeffs")
-p2 = plot!(grad_coeff[1][:, 2], label="b_coeffs")
+grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)[1]
+p1 = plot(grad_coeff[:,1], label="a_coeffs")
+p2 = plot!(grad_coeff[:, 2], label="b_coeffs")
 display(p2)
 display(to)
 
-## Optimization
-# res = DiffEqFlux.sciml_train(loss, Θ_start, ADAM(0.01), cb = cb, maxiters = 100, allow_f_increases=false)  # Let check gradient propagation
-# ps = res.minimizer
-# display(ps)
+
+## Test gradient with small perturbation, ∇f⋅δ ≈ f(x+δ) - f(x)
+
+iterations = 5
+
+error_sum = 0.0
+error_vector = zeros(iterations)
+
+for i in 1:iterations
+    global error_vector
+    global error_sum
+    delta = rand(size(Θ_start)...).*1e-6
+    grad_dot_delta = dot(grad_coeff, delta)
+    finite_delta = loss(Θ_start .+ delta)[1] - loss(Θ_start)[1]
+    error = grad_dot_delta - finite_delta
+    error_sum += error
+    error_vector[i] = error
+end
+
+mean_error = error_sum/iterations
+display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
+display(plot(error_vector))
 
 
 

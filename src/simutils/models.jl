@@ -9,6 +9,7 @@ using Infiltrator
 using Profile
 using Plots
 using Tracker
+using SparseArrays
 
 """
 Returns an array with length equal to number of cells, with a quadratic ramp function
@@ -25,18 +26,15 @@ end
 """
 Makes a vector with the current density for excitation of the system.
 """
-function excitation_density(a, positions::AbstractArray{T}, function_array, t) where {T<:Integer}
-    buf = Buffer(a, eltype(a), length(a))
+function excitation_density(a, positions, function_array, t)
     
-    for i in eachindex(a)
-        buf[i] = zero(eltype(a))
-    end
+    excitation_array = spzeros(eltype(a), size(a)...)
 
     for i in eachindex(positions)
-        buf[positions[i]] = function_array[i](t)
+        excitation_array[positions[i]] = function_array[i](t)
     end
 
-    return copy(buf)
+    return excitation_array
 end
 
 
@@ -68,17 +66,11 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         # first equation
         du = A_xv*(Q_v*v) - b_coeffs.*J - u.*pml_coeffs
 
+            
         # second equation
         dv = A_xu*(Q_u*u) - v.*pml_coeffs
 
-        # Using buffer instead off ArrayPartition to create return vector
-        buf = Buffer(state, len_state)
-        buf[u_indexes] = du
-        buf[v_indexes] = dv
-
-        # return ArrayPartition(du, dv) # Actually want to do it like this, but
-        # doesnt work with Zygote yet
-        return copy(buf)
+        return [du; dv]
     end
     return du_func
 end

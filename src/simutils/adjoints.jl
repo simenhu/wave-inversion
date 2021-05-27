@@ -13,11 +13,10 @@ Rule for the product of an DerivativeOperator and an AbstractArray
 """
 function rrule(::typeof(*), A::DerivativeOperator, M::AbstractArray)
     Ώ = A*M
-    A_sparse = SparseMatrixCSC(A)
-    function mul_pullback(ΔΏ)
-        ∂A = @thunk(ΔΏ*M')
-        ∂M = @thunk(A_sparse'*ΔΏ)
-        @infiltrate
+    function mul_pullback(ΔΩ)
+        ∂A = (ΔΩ*M')
+        # Same calculation as @thunk(A'*ΔΩ)
+        ∂M = (left_multiply_adjoint(A, ΔΩ))
         return (NO_FIELDS, ∂A, ∂M)
     end
     return Ώ, mul_pullback 
@@ -95,4 +94,18 @@ function rrule(::Type{<:LeftStaggeredDifference}, derivative_order, approximatio
     return A, LeftStaggeredDifference_pullback
 end
 
+function rrule(::typeof(excitation_density), a, positions, function_array, t)
+    
+    """
+    The DerivativeOperator matrix is equal to the DerivativeOperator with 1.0 as
+    coefficients where each column is scaled with a coefficient from a coefficient
+    array. To get the pullback for the coefficient whe have to divide the pullback
+    with the elements in DerivatorOperator with 1.0 coefficients
+    """
+    exciation_array = excitation_density(a, positions, function_array, t)
 
+    function excitation_density_pullback(ΔΩ)
+        return (NO_FIELDS, DoesNotExist(), DoesNotExist(), DoesNotExist(), DoesNotExist())
+    end
+    return exciation_array, excitation_density_pullback
+end
