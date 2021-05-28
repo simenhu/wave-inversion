@@ -37,9 +37,7 @@ f_excitation = gaussian_excitation_function(100, 0.005, sim_time, 0.03, 0.017)
 internal_positions = internal_node_positions(0, string_length, number_of_cells)
 
 ## Initial conditions
-# initial_position = sin.((2*pi/string_length)*internal_positions)
 u_0 = make_initial_condition(number_of_cells)
-# a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
 a_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 b_coeffs = copy(a_coeffs)
 Θ =  hcat(a_coeffs, b_coeffs)
@@ -55,11 +53,9 @@ solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoi
 solver = solvers[8]
 
 sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=Θ, abstol=abstol, reltol=reltol, dt=dt)
-# bench = @benchmark solve(prob, solver, save_everystep=false, p=Θ)
 # display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
 
 ## Calculate gradients
-# a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.01], [[1], [400]])
 a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ)*1.01], [[1]])
 b_coeffs_start = copy(a_coeffs_start)
 Θ_start =  hcat(a_coeffs_start, b_coeffs_start)
