@@ -132,8 +132,3 @@ mean_error = error_sum/iterations
 display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
 display(plot(error_vector))
 
-## Test stability properties with system
-
-system_matrix, A_xv, A_xu = wave_equation_system_matrix(string_length, number_of_cells, Θ_start, 4)
-eigen_values = eigen(system_matrix).values
-display(plot(real.(eigen_values)))

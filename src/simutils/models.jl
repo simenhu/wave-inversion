@@ -73,12 +73,13 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         return [du; dv]
     end
 
-
-    return du_func, system_matrix
+    return du_func
 end
 
 function wave_equation_system_matrix(domain, internal_nodes, p, order=2; full_model=false)
     
+    pml_width = 60
+
     dx = domain/(internal_nodes+1)
 
     a_coeffs = p[:,1] # 1/μ (1/permeability)
@@ -86,13 +87,25 @@ function wave_equation_system_matrix(domain, internal_nodes, p, order=2; full_mo
 
     squared_size = internal_nodes + 2
 
-    A_xv = zeros(squared_size, squared_size)
-    A_xu = zeros(squared_size, squared_size)
+    pml_coeffs = dampening_coefficients(internal_nodes, pml_width; max_value=2000.0, order=2)
 
-    # @infiltrate
+    A_xv_array = zeros(squared_size, squared_size)
+    A_xu_array = zeros(squared_size, squared_size)
 
-    A_xv[2:end-1, :] = Array(LeftStaggeredDifference{1}(1, order, dx, internal_nodes, b_coeffs))
-    A_xu[2:end-1, :] = Array(RightStaggeredDifference{1}(1, order, dx, internal_nodes, a_coeffs))
+    A_xv = Array(LeftStaggeredDifference{1}(1, order, dx, internal_nodes, b_coeffs))
+    A_xu = Array(RightStaggeredDifference{1}(1, order, dx, internal_nodes, a_coeffs))
 
-    return [I*0.0 Array(A_xu); Array(A_xv) I*0.0], A_xv, A_xu
+    A_xv_array[2:end-1, :] = A_xv
+    A_xu_array[2:end-1, :] = A_xu
+
+    if full_model
+        A_xv_array[2:end-1, 2:end-1] = A_xv_array[2:end-1, 2:end-1] - diagm(pml_coeffs)
+        A_xu_array[2:end-1, 2:end-1] = A_xu_array[2:end-1, 2:end-1] - diagm(pml_coeffs)
+    end
+    
+    system_matrix = [I*0.0 A_xu_array; A_xv_array I*0.0]
+
+    @infiltrate
+
+    return system_matrix, A_xv_array, A_xu_array
 end

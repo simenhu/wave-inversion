@@ -39,7 +39,7 @@ b_coeffs_start = copy(a_coeffs_start)
 
 ## Test stability properties with system
 
-system_matrix, A_xv, A_xu = wave_equation_system_matrix(string_length, number_of_cells, Θ_start, 2)
+system_matrix, A_xv, A_xu = wave_equation_system_matrix(string_length, number_of_cells, Θ_start, 2, full_model=true)
 eigen_values = eigen(system_matrix).values
 display(plot(real.(eigen_values)))
 
