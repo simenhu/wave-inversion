@@ -32,7 +32,7 @@ Manifest.toml
 # Simen's ignores
 
 .vscode/
-figurs/
+figures/
 mwe/
 dev/
 random_scripts/
