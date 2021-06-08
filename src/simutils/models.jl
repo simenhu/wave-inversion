@@ -10,6 +10,7 @@ using Profile
 using Plots
 using Tracker
 using SparseArrays
+using ForwardDiff
 
 """
 Returns an array with length equal to number of cells, with a quadratic ramp function
@@ -70,6 +71,10 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         # second equation
         dv = A_xu*(Q_u*u) - v.*pml_coeffs
 
+        if !(eltype(state) <: ForwardDiff.Dual)
+            @infiltrate 
+        end
+
         return [du; dv]
     end
 
@@ -105,7 +110,6 @@ function wave_equation_system_matrix(domain, internal_nodes, p, order=2; full_mo
     
     system_matrix = [I*0.0 A_xu_array; A_xv_array I*0.0]
 
-    @infiltrate
 
     return system_matrix, A_xv_array, A_xu_array
 end

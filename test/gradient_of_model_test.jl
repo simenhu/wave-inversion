@@ -4,7 +4,6 @@ using LinearAlgebra
 using Plots
 plotlyjs()
 using Simutils
-
 using ForwardDiff
 using Zygote
 using FiniteDifferences
@@ -31,14 +30,14 @@ internal_positions = internal_node_positions(0, string_length, number_of_cells)
 # initial_position = sin.((2*pi/string_length)*internal_positions)
 u_0 = make_initial_condition(number_of_cells)
 a_coeffs = b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), 1.5*sqrt(T/μ), 0.5*sqrt(T/μ)], [[1], [300], [450]])
-Θ = hcat(a_coeffs, b_coeffs)
+Θ_0 = hcat(a_coeffs, b_coeffs)
 
 
 ## Define ODE function
 f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[100], pml_width=60)
 
 ## calculate gradients of sum of model
-state_func(u) = sum(f(u, Θ, 0.01))
+state_func(u) = sum(f(u, Θ_0, 0.01))
 coefficient_func(Θ) = sum(f(u_0, Θ, 0.01))
 
 
@@ -51,9 +50,9 @@ plot!(state_grad_zygote, label="state - zygote")
 # plot!(state_grad_finite, label="state - finite")
 display(p1)
 
-parameter_grad_forward = ForwardDiff.gradient(coefficient_func, Θ)
-parameter_grad_zygote = Zygote.gradient(coefficient_func, Θ)[1]
-parameter_grad_finite = grad(central_fdm(2, 1), coefficient_func, Θ)[1]
+parameter_grad_forward = ForwardDiff.gradient(coefficient_func, Θ_0)
+parameter_grad_zygote = Zygote.gradient(coefficient_func, Θ_0)[1]
+parameter_grad_finite = grad(central_fdm(2, 1), coefficient_func, Θ_0)[1]
 
 p2 = plot(parameter_grad_forward[:, 1], label="a-coeff - ForwardDiff")
 plot!(parameter_grad_zygote[:, 1], label="a-coeff - zygote")
