@@ -87,6 +87,8 @@ p12 = plot(coeff_finite, label="coeff - finite diff")
 p13 = plot(coeff_forward, label="coeff - forward diff")
 p14 = plot(coeff_analytical, label="coeff - analytical")
 p1 =  plot(p11, p12, p13, p14, layout=(2, 2), size=(700, 350))
+display(p1)
+savefig("figures/custom_adjoint_test/coeff_test_gradients.eps")
 
 p21 = plot(state_zygote, label="state - zygote")
 p22 = plot(state_finite, label="state - finite difference")
@@ -110,23 +112,23 @@ plot!(xlabel="index")
 display(p4)
 savefig(p4, "figures/custom_adjoint_test/coeffs_zero_test_gradients.eps")
 
-## Calculate squared sum
+## Calculate mean absolute difference
 
 mean_absolute_difference(x1, x2) = sum(abs.(x1 - x2))/length(x1)
 coeff_difference_mad = mean_absolute_difference(coeff_zygote, coeff_finite)
 coeff_forward_mad = mean_absolute_difference(coeff_zygote, coeff_forward)
 coeff_analytical_mad = mean_absolute_difference(coeff_zygote, coeff_analytical)
 
-stfate_finite_mad = mean_absolute_difference(state_zygote, state_finite)
+state_finite_mad = mean_absolute_difference(state_zygote, state_finite)
 state_forward_mad = mean_absolute_difference(state_zygote, state_forward)
 state_analytical_mad = mean_absolute_difference(state_zygote, state_analytical)
 
-data = Any[coeff_difference_mad coeff_forward_mad coeff_analytical_mad;
+numeric_data = Any[coeff_difference_mad coeff_forward_mad coeff_analytical_mad;
         state_difference_mad state_forward_mad state_analytical_mad]
 
 rows = Any["coefficients", "state"]
 
-data = [rows data]
+data = [rows numeric_data]
 
 pretty_table(data, header = ["variable","finite difference", "forward mode", "analytical"])
 

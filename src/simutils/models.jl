@@ -71,9 +71,9 @@ function general_one_dimensional_wave_equation_with_parameters(domain, internal_
         # second equation
         dv = A_xu*(Q_u*u) - v.*pml_coeffs
 
-        if !(eltype(state) <: ForwardDiff.Dual)
-            @infiltrate 
-        end
+        # if (eltype(state) <: ForwardDiff.Dual)
+        #     @infiltrate 
+        # end
 
         return [du; dv]
     end
