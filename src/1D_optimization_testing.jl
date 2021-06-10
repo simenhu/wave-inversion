@@ -8,6 +8,7 @@ using Plots
 using DataInterpolations
 using TimerOutputs
 using BenchmarkTools
+using FiniteDifferences
 
 plotlyjs()
 
@@ -103,9 +104,9 @@ end
 
 ## test gradient of loss
 # @profview global grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)
-grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)[1]
-p1 = plot(grad_coeff[:,1], label="a_coeffs")
-p2 = plot!(grad_coeff[:, 2], label="b_coeffs")
+grad_coeff_zygote = @timeit to "gradient - zygote" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)[1]
+p1 = plot(grad_coeff_zygote[:,1], label="a_coeffs, zygote")
+p2 = plot!(grad_coeff_zygote[:, 2], label="b_coeffs, zygote")
 display(p2)
 display(to)
 
@@ -121,7 +122,7 @@ for i in 1:iterations
     global error_vector
     global error_sum
     delta = rand(size(Θ_start)...).*1e-6
-    grad_dot_delta = dot(grad_coeff, delta)
+    grad_dot_delta = dot(grad_coeff_zygote, delta)
     finite_delta = loss(Θ_start .+ delta)[1] - loss(Θ_start)[1]
     error = grad_dot_delta - finite_delta
     error_sum += error
@@ -132,3 +133,9 @@ mean_error = error_sum/iterations
 display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
 display(plot(error_vector))
 
+## Test model with finite FiniteDifference
+grad_coeff_finite = @timeit to "finite - gradient" grad(central_fdm(2, 1), Θ -> loss(Θ)[1], Θ_start)[1]
+p3 = plot(grad_coeff_finite[:,1], label="a_coeffs, finite")
+p4 = plot!(grad_coeff_finite[:, 2], label="b_coeffs, finite")
+display(p4)
+display(to)

@@ -100,7 +100,7 @@ a_coeff_finite_mad = mean_absolute_difference(parameter_grad_zygote[:, 1], param
 b_coeff_forward_mad = mean_absolute_difference(parameter_grad_zygote[:, 2], parameter_grad_forward[:, 2])
 b_coeff_finite_mad = mean_absolute_difference(parameter_grad_zygote[:, 2], parameter_grad_finite[:, 2])
 
-numeric_data =  [state_finite_mad 0.0;
+numeric_data =  [state_finite_mad "nan";
                 a_coeff_finite_mad a_coeff_forward_mad;
                 b_coeff_finite_mad b_coeff_forward_mad]
 
