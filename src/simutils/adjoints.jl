@@ -3,6 +3,7 @@ import LinearAlgebra
 import ChainRulesCore: frule, rrule, DoesNotExist, NO_FIELDS, @thunk, Composite
 using SparseArrays
 using Infiltrator
+import FFTW
 
 export rrule
 
@@ -14,9 +15,9 @@ Rule for the product of an DerivativeOperator and an AbstractArray
 function rrule(::typeof(*), A::DerivativeOperator, M::AbstractArray)
     Ώ = A*M
     function mul_pullback(ΔΩ)
-        ∂A = (ΔΩ*M')
+        ∂A = @thunk(ΔΩ*M')
         # Same calculation as @thunk(A'*ΔΩ)
-        ∂M = (left_multiply_adjoint(A, ΔΩ))
+        ∂M = @thunk(left_multiply_adjoint(A, ΔΩ))
         return (NO_FIELDS, ∂A, ∂M)
     end
     return Ώ, mul_pullback 
@@ -109,3 +110,42 @@ function rrule(::typeof(excitation_density), a, positions, function_array, t)
     end
     return exciation_array, excitation_density_pullback
 end
+
+# function rrule(::typeof(FFTW.fft), x)
+#     freq = FFTW.ftt(x)
+#     @infiltrate
+#     function fft_pullback(ΔΩ)
+#         @infiltrate
+#         N = length(ΔΩ)
+#         return (NO_FIELDS, N*FFTW.FFTW.ifft(ΔΩ))
+#     end
+
+#     return freq, fft_pullback
+# end
+
+# function rrule(::typeof(FFTW.ifft), x)
+#     freq = FFTW.iftt(x)
+    
+#     function fft_pullback(ΔΩ)
+#         N = length(ΔΩ)
+#         return (NO_FIELDS, 1/N*FFTW.fft(ΔΩ))
+#     end
+
+#     return freq, fft_pullback
+# end
+
+
+# Zygote.@adjoint function FFTW.fft(xs)
+#     return FFTW.fft(xs), function(Δ)
+#         N = length(Δ)
+#         return (N * FFTW.ifft(Δ),)
+#     end
+# end
+
+# Zygote.@adjoint function FFTW.ifft(xs)
+#     return FFTW.ifft(xs), function(Δ)
+#         N = length(Δ)
+#         return (1/N* FFTW.fft(Δ),)
+#     end
+# end
+
