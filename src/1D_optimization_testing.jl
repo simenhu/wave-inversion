@@ -102,9 +102,10 @@ end
 
 function error_position_frequency_loss(Θ, position, upper_frequency)
     pred = predict(Θ)
-    # l = FFTW.fft(pred[position, :] - sol[position, :])[1:upper_frequency]
-    l_diff = pred[position, :] - sol[position, :]
-    l = FFTW.fft(l_diff)
+    s = Complex.(sol[position, :])
+    pred_complex = Complex.(pred[position, :])
+    l_diff = pred_complex - s
+    l = FFTW.fft(l_diff)[1:upper_frequency]
     # @infiltrate
     return sum(abs2, l), pred
 end
@@ -132,27 +133,27 @@ display(to)
 
 
 ## Test gradient with small perturbation, ∇f⋅δ ≈ f(x+δ) - f(x)
-"""
-iterations = 5
 
-error_sum = 0.0
-error_vector = zeros(iterations)
+# iterations = 5
 
-for i in 1:iterations
-    global error_vector
-    global error_sum
-    delta = rand(size(p_start)...).*1e-6
-    grad_dot_delta = dot(grad_coeff_zygote, delta)
-    finite_delta = loss(p_start .+ delta)[1] - loss(p_start)[1]
-    error = grad_dot_delta - finite_delta
-    error_sum += error
-    error_vector[i] = error
-end
+# error_sum = 0.0
+# error_vector = zeros(iterations)
 
-mean_error = error_sum/iterations
-display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
-display(plot(error_vector))
-"""
+# for i in 1:iterations
+#     global error_vector
+#     global error_sum
+#     delta = rand(size(p_start)...).*1e-6
+#     grad_dot_delta = dot(grad_coeff_zygote, delta)
+#     finite_delta = loss(p_start .+ delta)[1] - loss(p_start)[1]
+#     error = grad_dot_delta - finite_delta
+#     error_sum += error
+#     error_vector[i] = error
+# end
+
+# mean_error = error_sum/iterations
+# display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
+# display(plot(error_vector))
+
 
 ## Test model with finite FiniteDifference
 # grad_coeff_finite = @timeit to "finite - gradient" grad(central_fdm(2, 1), Θ -> loss(Θ)[1], Θ_start)[1]
