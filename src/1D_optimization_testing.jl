@@ -34,6 +34,7 @@ number_of_cells = Int(div(string_length, dx))
 dt = 0.0001
 abstol = 1e-8
 reltol = 1e-8
+receiver_position = 100
 
 ## Making inversion data
 # Defining constants for time property
@@ -47,6 +48,7 @@ internal_positions = internal_node_positions(0, string_length, number_of_cells)
 ## Initial conditions
 u_0 = make_initial_condition(number_of_cells)
 coeff_background = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
+
 a_coeffs = copy(coeff_background)
 b_coeffs = make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.5], [[1], [400]])
 p =  hcat(a_coeffs, b_coeffs)
@@ -69,7 +71,8 @@ sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=p, abst
 ## Calculate gradients
 # a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
 a_coeffs_start = copy(coeff_background)
-b_coeffs_start = copy(coeff_background)
+# b_coeffs_start = copy(coeff_background)
+b_coeffs_start =  make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.45], [[1], [400]])
 # b_coeffs_start = b_coeffs
 p_start =  hcat(a_coeffs_start, b_coeffs_start)
 
@@ -100,21 +103,37 @@ function state_sum_loss(Θ)
     return sum(pred), pred
 end
 
+function energy_flux_loss_function(Θ, position)
+    pred = predict(Θ)
+    l = (pred[position, :] - sol[position, :]).^2
+    return sum(abs2, l), pred
+end
+
 function error_position_frequency_loss(Θ, position, upper_frequency)
     pred = predict(Θ)
     s = Complex.(sol[position, :])
     pred_complex = Complex.(pred[position, :])
     l_diff = pred_complex - s
     l = FFTW.fft(l_diff)[1:upper_frequency]
-    # @infiltrate
+    return sum(abs2, l), pred
+end
+
+function error_position_frequency_energy_loss(Θ, position, upper_frequency)
+    pred = predict(Θ)
+    s = Complex.(sol[position, :])
+    pred_complex = Complex.(pred[position, :])
+    l_diff = pred_complex - s
+    l = FFTW.fft(l_diff)[1:upper_frequency].^2
     return sum(abs2, l), pred
 end
 
 # loss(Θ) = error_loss(Θ)
 # loss(Θ) = state_sum_loss(Θ)
 # loss(Θ) = error_position_loss(Θ, 100)
-loss(Θ) = error_position_frequency_loss(Θ, 100, 10)
-
+loss(Θ) = error_position_frequency_loss(Θ, receiver_position , 15)
+# loss(Θ) = energy_flux_loss_function(Θ, 100)
+# loss(Θ) = error_position_frequency_energy_loss(Θ, 100, 15)
+loss_with_freq(Θ, upper_frequency) = error_position_frequency_loss(Θ, receiver_position, upper_frequency)
 
 ## Test that hte loss function makes sense
 loss_with_correct_param = loss(p)[1]
@@ -178,10 +197,27 @@ cb = function(Θ, l, pred)
 end
 
 # @profview global res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_start, ADAM(0.01), cb = cb, maxiters = 3)
-res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_start, ADAM(0.01), cb = cb, maxiters = 3)
+display(plot(b_coeffs_start, label="starting coefficients"))
+display(plot!(b_coeffs, label="true coefficients"))
+current_b_coeff = b_coeffs_start
+for freq in 1:15
+    res = DiffEqFlux.sciml_train(b_coeffs -> loss_with_freq([a_coeffs_start b_coeffs], freq), current_b_coeff, BFGS(), cb = cb, maxiters = 10, allow_f_increases = false)
+    current_b_coeff = res.u
+    display(plot!(current_b_coeff, label="iteration-$(freq) coefficients"))
+end
 
+## Simulate system with new solution
 
+optimized_sol = solve(prob, solver, save_everystep=true, p=[a_coeffs_start res.u], abstol=abstol, reltol=reltol, dt=dt)
 
+## Plot time signal after optimization
+p1 = plot(wrong_sol[receiver_position, :] - sol[receiver_position, :], label="before optimization")
+plot!(optimized_sol[receiver_position, :] - sol[receiver_position, :], label="after optimization")
+display(plot(p1))
 
-
+## Plot coefficient after optimization
+p1 = plot(b_coeffs, label="Correct coeffs")
+plot!(b_coeffs_start, label="Start coeffs")
+plot!(res.u, label="Optimized coeffs")
+display(plot(p1, legend=:topleft))
 
