@@ -151,6 +151,23 @@ p22 = plot!(time_seconds, adam_sol[receiver_position, :] - sol[receiver_position
 p1 = plot(p11, p21, layout=(2, 1), size=(700, 350), link=:x)
 display(p1)
 
+## Plot development of prediction
+pred_array = hcat([pred[receiver_position, :] for pred in PRED]...)
+pred_array_difference = pred_array .- sol[receiver_position, :]
+h1 = heatmap(pred_array_difference)
+p12 = plot(LOSS, label="loss")
+p1 = plot(h1, p12, layout=(2, 1), link=:x)
+display(p1)
+
+
+## Plot development of coefficients
+pars_array = hcat([pred[:, 2] for pred in PARS]...)
+pars_array_difference = pars_array .- p_perturbated[:, 2]
+h1 = heatmap(pars_array_difference)
+p12 = plot(LOSS, label="loss")
+p1 = plot(h1, p12, layout=(2, 1), link=:x)
+display(p1)
+
 ## Optimize with increasing frequencies
 current_b_coeff = b_coeffs_perturbated
 for freq in 1:15
