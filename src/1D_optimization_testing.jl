@@ -8,7 +8,6 @@ using Optim
 using Flux
 using DiffEqSensitivity
 using Zygote
-using FFTW
 
 using LinearAlgebra
 using Plots
@@ -17,12 +16,11 @@ using TimerOutputs
 using BenchmarkTools
 using FiniteDifferences
 using Infiltrator
-
-plotlyjs()
-
-using DelimitedFiles, Plots
+using DelimitedFiles
 using Simutils
 
+# plotlyjs()
+pyplot()
 
 ## Defining constants for string property
 T = 100.0 # N
@@ -58,132 +56,67 @@ p =  hcat(a_coeffs, b_coeffs)
 f = general_one_dimensional_wave_equation_with_parameters(string_length, number_of_cells, function_array=[f_excitation], excitation_positions=[100], pml_width=60)
 prob = ODEProblem(f, u_0, sim_time, p=p)
 
-## Simulate
+## Simulate true parameters
 to = TimerOutput()
 solvers =  [Tsit5(), TRBDF2(), Rosenbrock23(), AutoTsit5(Rosenbrock23()), Midpoint(), Vern7(),
-             KenCarp4(), ORK256(), ParsaniKetchesonDeconinck3S32(), SSPRK22()]
+            KenCarp4(), ORK256(), ParsaniKetchesonDeconinck3S32(), SSPRK22()]
+
 solver = solvers[8]
-
 sol = @timeit to "simulation" solve(prob, solver, save_everystep=true, p=p, abstol=abstol, reltol=reltol, dt=dt)
-# display(animate_solution(sol, a_coeffs, b_coeffs, sim_time, 0.001))
+time_seconds = sol.t .* dt
+
+## Define pertrbated parameters
+a_coeffs_pertrbated = copy(coeff_background)
+b_coeffs_perturbated =  make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.45], [[1], [400]])
+p_perturbated =  hcat(a_coeffs_pertrbated, b_coeffs_perturbated)
+wrong_sol = solve(prob, solver, save_everystep=true, p=p_perturbated, abstol=abstol, reltol=reltol, dt=dt)
+
+## Plot the perturbated coefficients
 
 
-## Calculate gradients
-# a_coeffs_start = make_material_coefficients(number_of_cells, [sqrt(T/μ)], [[1]])
-a_coeffs_start = copy(coeff_background)
-# b_coeffs_start = copy(coeff_background)
-b_coeffs_start =  make_material_coefficients(number_of_cells, [sqrt(T/μ), sqrt(T/μ)*1.45], [[1], [400]])
-# b_coeffs_start = b_coeffs
-p_start =  hcat(a_coeffs_start, b_coeffs_start)
 
-wrong_sol = solve(prob, solver, save_everystep=true, p=p_start, abstol=abstol, reltol=reltol, dt=dt)
+## Plot time domain response
+p11 = plot(time_seconds, sol[receiver_position, :], label="True model")
+p12 = plot(time_seconds, wrong_sol[receiver_position, :], label="Perturbated model")
+p13 = plot(time_seconds, wrong_sol[receiver_position, :] - sol[receiver_position, :], label="Difference")
+p1 = plot(p11, p12, p13, layout=(3, 1), link = :x, xlabel="time [s]", xformatter=:scientific)
+display(p1)
+savefig("figures/experiment_with_one_transition/time_domain_reflection.eps")
 
+## Define loss function
 
 solution_time = sol.t
 function predict(Θ)
     Array(solve(prob, solver, p=Θ, saveat=solution_time; sensealg=InterpolatingAdjoint(),  abstol=abstol, reltol=reltol, dt=dt))
 end
 
-
-## Loss funcitons
-function error_loss(Θ)
-    pred = predict(Θ)
-    l = pred - sol
-    return sum(abs2, l), pred
-end
-
-function error_position_loss(Θ, position)
-    pred = predict(Θ)
-    l = pred[position, :] - sol[position, :]
-    return sum(abs2, l), pred
-end
-
-function state_sum_loss(Θ)
-    pred = predict(Θ)
-    return sum(pred), pred
-end
-
-function energy_flux_loss_function(Θ, position)
-    pred = predict(Θ)
-    l = (pred[position, :] - sol[position, :]).^2
-    return sum(abs2, l), pred
-end
-
-function error_position_frequency_loss(Θ, position, upper_frequency)
-    pred = predict(Θ)
-    s = Complex.(sol[position, :])
-    pred_complex = Complex.(pred[position, :])
-    l_diff = pred_complex - s
-    l = FFTW.fft(l_diff)[1:upper_frequency]
-    return sum(abs2, l), pred
-end
-
-function error_position_frequency_energy_loss(Θ, position, upper_frequency)
-    pred = predict(Θ)
-    s = Complex.(sol[position, :])
-    pred_complex = Complex.(pred[position, :])
-    l_diff = pred_complex - s
-    l = FFTW.fft(l_diff)[1:upper_frequency].^2
-    return sum(abs2, l), pred
-end
-
-# loss(Θ) = error_loss(Θ)
-# loss(Θ) = state_sum_loss(Θ)
-# loss(Θ) = error_position_loss(Θ, 100)
-loss(Θ) = error_position_frequency_loss(Θ, receiver_position , 15)
-# loss(Θ) = energy_flux_loss_function(Θ, 100)
-# loss(Θ) = error_position_frequency_energy_loss(Θ, 100, 15)
+# loss(Θ) = error_loss(predict, sol, Θ)
+# loss(Θ) = state_sum_loss(predict, sol, Θ)
+loss(Θ) = error_position_loss(predict, sol, Θ, 100)
+# loss(Θ) = error_position_frequency_loss(predict, sol, Θ, receiver_position , 15)
+# loss(Θ) = energy_flux_loss_function(predict, sol, Θ, 100)
+# loss(Θ) = error_position_frequency_energy_loss(predict, sol, Θ, 100, 15)
 loss_with_freq(Θ, upper_frequency) = error_position_frequency_loss(Θ, receiver_position, upper_frequency)
 
-## Test that hte loss function makes sense
+
+## Test that the loss function makes sense
 loss_with_correct_param = loss(p)[1]
-loss_with_wrong_param = loss(p_start)[1]
+loss_with_wrong_param = loss(p_perturbated)[1]
 display("Loss with correct param: $(loss_with_correct_param)")
 display("Loss with wrong param: $(loss_with_wrong_param)")
 
 
-## test gradient of loss
+## Gradient of initial model
 # @profview global grad_coeff = @timeit to "gradient calculation" Zygote.gradient(Θ -> loss(Θ)[1], Θ_start)
-grad_coeff_zygote = @timeit to "gradient - zygote" Zygote.gradient(Θ -> loss(Θ)[1], p_start)[1]
-p1 = plot(grad_coeff_zygote[:,1], label="a_coeffs, zygote")
-p2 = plot!(grad_coeff_zygote[:, 2], label="b_coeffs, zygote")
+grad_coeff_zygote = @timeit to "gradient" Zygote.gradient(Θ -> loss(Θ)[1], p_perturbated)[1]
+p1 = plot(grad_coeff_zygote[:,1], label="a_coeffs", size=(700, 350))
+p2 = plot!(grad_coeff_zygote[:, 2], label="b_coeffs", xlabel="position")
 display(p2)
+savefig("figures/experiment_with_one_transition/start_model_gradient.eps")
 display(to)
 
 
-## Test gradient with small perturbation, ∇f⋅δ ≈ f(x+δ) - f(x)
-
-# iterations = 5
-
-# error_sum = 0.0
-# error_vector = zeros(iterations)
-
-# for i in 1:iterations
-#     global error_vector
-#     global error_sum
-#     delta = rand(size(p_start)...).*1e-6
-#     grad_dot_delta = dot(grad_coeff_zygote, delta)
-#     finite_delta = loss(p_start .+ delta)[1] - loss(p_start)[1]
-#     error = grad_dot_delta - finite_delta
-#     error_sum += error
-#     error_vector[i] = error
-# end
-
-# mean_error = error_sum/iterations
-# display("Mean error of finite difference test after $(iterations) iterations: $(mean_error)")
-# display(plot(error_vector))
-
-
-## Test model with finite FiniteDifference
-# grad_coeff_finite = @timeit to "finite - gradient" grad(central_fdm(2, 1), Θ -> loss(Θ)[1], Θ_start)[1]
-# p3 = plot(grad_coeff_finite[:,1], label="a_coeffs, finite")
-# p4 = plot!(grad_coeff_finite[:, 2], label="b_coeffs, finite")
-# display(p4)
-# display(to)
-
-
-## Test optimizing and see what happens
-## Define values for callback funciton
+## Optimization
 LOSS = []
 PRED = []
 PARS = []
@@ -196,19 +129,43 @@ cb = function(Θ, l, pred)
     false
 end
 
-# @profview global res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_start, ADAM(0.01), cb = cb, maxiters = 3)
-display(plot(b_coeffs_start, label="starting coefficients"))
-display(plot!(b_coeffs, label="true coefficients"))
-current_b_coeff = b_coeffs_start
+## Optimize with ADAM
+adam_res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_perturbated, ADAM(0.1), cb = cb, maxiters = 20, allow_f_increases = false)
+adam_sol = solve(prob, solver, save_everystep=true, p=adam_res.u, abstol=abstol, reltol=reltol, dt=dt)
+
+## Plot result gradients from ADAM optimizer
+p11 = plot(p, label="starting coefficients")
+p12 = plot!(p_perturbated, label="true coefficients")
+p13 = plot!(adam_res.u, label="Optimized coefficients")
+p1 = plot(p11, size=(700, 350))
+display(p1)
+
+## Plot result time domain response
+p11 = plot(time_seconds, sol[receiver_position, :], label="True time response")
+p12 = plot!(time_seconds, wrong_sol[receiver_position, :], label="Perturbated time response")
+p13 = plot!(time_seconds, adam_sol[receiver_position, :], label="Optimized time response")
+
+p21 = plot(time_seconds, wrong_sol[receiver_position, :] - sol[receiver_position, :], label="Initial difference")
+p22 = plot!(time_seconds, adam_sol[receiver_position, :] - sol[receiver_position, :], label="Optimized difference")
+
+p1 = plot(p11, p21, layout=(2, 1), size=(700, 350), link=:x)
+display(p1)
+
+## Optimize with increasing frequencies
+current_b_coeff = b_coeffs_perturbated
 for freq in 1:15
-    res = DiffEqFlux.sciml_train(b_coeffs -> loss_with_freq([a_coeffs_start b_coeffs], freq), current_b_coeff, BFGS(), cb = cb, maxiters = 10, allow_f_increases = false)
+    global current_b_coeff
+
+    res = DiffEqFlux.sciml_train(b_coeffs -> loss_with_freq([a_coeffs_pertrbated b_coeffs], freq), current_b_coeff, BFGS(), cb = cb, maxiters = 10, allow_f_increases = false)
     current_b_coeff = res.u
     display(plot!(current_b_coeff, label="iteration-$(freq) coefficients"))
 end
 
+
+
 ## Simulate system with new solution
 
-optimized_sol = solve(prob, solver, save_everystep=true, p=[a_coeffs_start res.u], abstol=abstol, reltol=reltol, dt=dt)
+optimized_sol = solve(prob, solver, save_everystep=true, p=[a_coeffs_pertrbated res.u], abstol=abstol, reltol=reltol, dt=dt)
 
 ## Plot time signal after optimization
 p1 = plot(wrong_sol[receiver_position, :] - sol[receiver_position, :], label="before optimization")
@@ -217,7 +174,7 @@ display(plot(p1))
 
 ## Plot coefficient after optimization
 p1 = plot(b_coeffs, label="Correct coeffs")
-plot!(b_coeffs_start, label="Start coeffs")
+plot!(b_coeffs_perturbated, label="Start coeffs")
 plot!(res.u, label="Optimized coeffs")
 display(plot(p1, legend=:topleft))
 
