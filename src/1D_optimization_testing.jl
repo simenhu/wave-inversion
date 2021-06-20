@@ -116,57 +116,65 @@ savefig("figures/experiment_with_one_transition/start_model_gradient.eps")
 display(to)
 
 
-## Optimization
+## Optimize with ADAM
+# Reset parameters
 LOSS = []
 PRED = []
 PARS = []
 
-cb = function(Θ, l, pred)
+cb = function(params, l, pred)
     display(l)
     append!(PRED, [pred])
     append!(LOSS, l)
-    append!(PARS, [Θ])
+    append!(PARS, [params])
     false
 end
 
-## Optimize with ADAM
-adam_res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_perturbated, ADAM(0.1), cb = cb, maxiters = 20, allow_f_increases = false)
-adam_sol = solve(prob, solver, save_everystep=true, p=adam_res.u, abstol=abstol, reltol=reltol, dt=dt)
+opt_res = DiffEqFlux.sciml_train(Θ -> loss(Θ), p_perturbated, ADAM(0.1), cb = cb, maxiters = 30, allow_f_increases = true)
+opt_sol = solve(prob, solver, save_everystep=true, p=opt_res.u, abstol=abstol, reltol=reltol, dt=dt)
 
-## Plot result gradients from ADAM optimizer
-p11 = plot(p, label="starting coefficients")
+## Plot resulting coefficients from ADAM optimizer
+p11 = plot(p, label="starting coefficients", legend=:topleft)
 p12 = plot!(p_perturbated, label="true coefficients")
-p13 = plot!(adam_res.u, label="Optimized coefficients")
-p1 = plot(p11, size=(700, 350))
+p13 = plot!(opt_res.u, label="Optimized coefficients")
+
+p21 = plot(opt_res.u - p_perturbated, label="Change from initial model", legend=:topleft)
+
+p1 = plot(p11, p21, layout=(2, 1), size=(700, 350), xlabel="position", link=:x)
 display(p1)
+savefig("figures/experiment_with_one_transition/optimized_coefficients.eps")
 
 ## Plot result time domain response
 p11 = plot(time_seconds, sol[receiver_position, :], label="True time response")
 p12 = plot!(time_seconds, wrong_sol[receiver_position, :], label="Perturbated time response")
-p13 = plot!(time_seconds, adam_sol[receiver_position, :], label="Optimized time response")
+p13 = plot!(time_seconds, opt_sol[receiver_position, :], label="Optimized time response")
 
-p21 = plot(time_seconds, wrong_sol[receiver_position, :] - sol[receiver_position, :], label="Initial difference")
-p22 = plot!(time_seconds, adam_sol[receiver_position, :] - sol[receiver_position, :], label="Optimized difference")
+p21 = plot(time_seconds, wrong_sol[receiver_position, :] - sol[receiver_position, :], label="Initial error")
+p22 = plot!(time_seconds, opt_sol[receiver_position, :] - sol[receiver_position, :], label="Optimized error")
+p23 = plot!(time_seconds, PRED[3][receiver_position, :] - sol[receiver_position, :], label="Intermediate error")
 
-p1 = plot(p11, p21, layout=(2, 1), size=(700, 350), link=:x)
+p1 = plot(p11, p21, layout=(2, 1), size=(700, 350), xlabel="time [s]", link=:x)
 display(p1)
+savefig("figures/experiment_with_one_transition/optimized_time_response.eps")
 
 ## Plot development of prediction
 pred_array = hcat([pred[receiver_position, :] for pred in PRED]...)
 pred_array_difference = pred_array .- sol[receiver_position, :]
-h1 = heatmap(pred_array_difference)
-p12 = plot(LOSS, label="loss")
-p1 = plot(h1, p12, layout=(2, 1), link=:x)
+h1 = heatmap(pred_array_difference, ylabel="time [s]")
+p12 = plot(LOSS, ylabel="loss", ylims=(0, max(LOSS...)))
+p1 = plot(h1, p12, layout=(2, 1), xlabel="Iteration", link=:x, legend=false)
 display(p1)
+savefig("figures/experiment_with_one_transition/time_response_development.eps")
 
 
 ## Plot development of coefficients
-pars_array = hcat([pred[:, 2] for pred in PARS]...)
+pars_array = hcat([pars[:, 2] for pars in PARS]...)
 pars_array_difference = pars_array .- p_perturbated[:, 2]
-h1 = heatmap(pars_array_difference)
+h1 = heatmap(pars_array_difference, label="coefficients")
 p12 = plot(LOSS, label="loss")
 p1 = plot(h1, p12, layout=(2, 1), link=:x)
 display(p1)
+
 
 ## Optimize with increasing frequencies
 current_b_coeff = b_coeffs_perturbated
