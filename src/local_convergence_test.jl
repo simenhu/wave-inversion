@@ -1,3 +1,4 @@
+using Optim: gradient_convergence_assessment
 using DiffEqSensitivity: ZygoteRules
 using Zygote: zeros, length
 ##
@@ -21,7 +22,7 @@ using Infiltrator
 
 plotlyjs()
 
-using DelimitedFiles, Plots
+using DelimitedFiles
 using Simutils
 
 
@@ -85,71 +86,105 @@ loss_with_freq(Θ, upper_frequency) = error_position_frequency_loss(predict, sol
 
 
 ## Parameters
-
-perturbation_amplitude = 1e-5
-step_length = 1e6
+perturbation_list = [1e-5, 1e-5, 1e-5] 
+step_length_list = [1e6, 1e4, 1e2]
+max_iter = 40
+param_length = length(step_length_list)
 
 ## Define helper funcions
 function perturbate_vector(vec, amplitude_range)
+    vec = copy(vec)
     perturbation = 2*amplitude_range*rand(size(vec)...) .- amplitude_range
     vec + perturbation, perturbation
 end
 
 parameter_distance(x1, x2) = sqrt(sum((x1-x2).^2))
 
-## Calculate initial values
-b_coeffs_perturbated, perturbation = perturbate_vector(b_coeffs, perturbation_amplitude)
+function gradient_descent_loop(coeff_perturbated, coeff_true, step_length)
 
-p_perturbated = [a_coeffs b_coeffs_perturbated]
-loss_perturbated, wrong_sol = loss(p_perturbated)
-display("loss from perturbation: $(loss_perturbated)")
-
-## Gradient descent loop
-loss_development = []
-parameter_distance_development = []
-
-last_loss = Inf
-current_coeff = copy(p_perturbated)
-current_loss = loss(current_coeff)[1]
-push!(loss_development, current_loss)
-
-current_parameter_distance = parameter_distance(p, p_perturbated)
-push!(parameter_distance_development, current_parameter_distance)
-
-while current_loss < last_loss
-    global current_coeff
-    global current_loss
-
-    last_loss = current_loss
-    current_grad = Zygote.gradient(Θ -> loss(Θ)[1], current_coeff)[1]
-    current_coeff = current_coeff - step_length.*current_grad
-
-    # Calculate new distance in parameter space
-    current_parameter_distance = parameter_distance(current_coeff, p)
-    push!(parameter_distance_development, current_parameter_distance)
-
+    current_coeff = copy(coeff_perturbated)
+    iter = 0
+    loss_development = []
     current_loss = loss(current_coeff)[1]
     push!(loss_development, current_loss)
 
-    display("loss: $(current_loss), loss difference: $(current_loss - last_loss), parameter distance: $(current_parameter_distance)")
+    parameter_distance_development = []
+    current_parameter_distance = parameter_distance(coeff_true, current_coeff)
+    push!(parameter_distance_development, current_parameter_distance)
+
+    last_loss = Inf
+    
+    while current_loss < last_loss && iter<=max_iter
+        iter += 1
+        current_grad = Zygote.gradient(Θ -> loss(Θ)[1], current_coeff)[1]
+        current_coeff = current_coeff - step_length.*current_grad
+
+        # Calculate new distance in parameter space
+        current_parameter_distance = parameter_distance(current_coeff, p)
+        push!(parameter_distance_development, current_parameter_distance)
+
+        current_loss, last_loss = loss(current_coeff)[1], current_loss
+        push!(loss_development, current_loss)
+
+        display("loss: $(current_loss), loss difference: $(current_loss - last_loss), parameter distance: $(current_parameter_distance)")
+    end
+    return current_coeff, loss_development, parameter_distance_development
 end
 
-## Calculate solution with optimized parameters
-optimized_sol = loss(current_coeff)[2]
 
+## Gradient descent loop
+optimized_coeff_collection = []
+loss_collection = []
+parameter_distance_collection = []
+optimized_sol_collection = []
+p_perturbated_collection = []
+wrong_sol_collection = []
 
+# Calculate convergence for three sets of parameters
+for param in 1:param_length
+    # Calculate initial values
+    b_coeffs_perturbated, perturbation = perturbate_vector(b_coeffs, perturbation_list[param])
+
+    p_perturbated = [a_coeffs b_coeffs_perturbated]
+    push!(p_perturbated_collection, p_perturbated)
+    loss_perturbated, wrong_sol = loss(p_perturbated)
+    push!(wrong_sol_collection, wrong_sol)
+    display("loss from perturbation $(perturbation_list[param]): $(loss_perturbated)")
+
+    step_length = step_length_list[param]
+
+    optimized_coeff, loss_development, parameter_distance_development = gradient_descent_loop(p_perturbated, p, step_length)
+    optimized_sol = loss(optimized_coeff)[2]
+    
+    push!(optimized_coeff_collection, optimized_coeff)
+    push!(loss_collection, loss_development)
+    push!(parameter_distance_collection, parameter_distance_development)
+    push!(optimized_sol_collection, optimized_sol)
+end
+
+# gren, blue red
 ## Plot metrics of convergence test
-p11 = plot(loss_development, label="loss development", ylims=(0, max(loss_development...)*1.1))
-p12 = plot(parameter_distance_development, label="parameter distance development", ylims=(0, max(parameter_distance_development...)*1.1), color=:red)
-p1 = plot(p11, p12, layout=(2, 1))
+p1 = plot()
+for param in 1:param_length
+    _ = plot!(loss_collection[param], label="Loss: range-$(perturbation_list[param]), step-length-$(step_length_list[param])", ylims=(0, max(loss_collection[param]...)*1.1))
+end
+
+p2 = plot()
+for param in 1:param_length
+    _ = plot!(parameter_distance_collection[param], label="Parameter distance: range-$(perturbation_list[param]), step-length-$(step_length_list[param])", ylims=(0, max(parameter_distance_collection[param]...)*1.1))
+end
+
+p1 = plot(p1, p2, layout=(2, 1))
 display(p1)
 
-p21 = plot(p_perturbated - p, label="Initial parameter error")
-p22 = plot(current_coeff - p, label="Optimized parameter error")
-p23 = plot(current_coeff - p_perturbated, label="Change in parameters")
+
+parameter_index = 1
+p21 = plot(p_perturbated_collection[parameter_index] - p, label="Initial parameter error")
+p22 = plot(optimized_coeff_collection[parameter_index] - p, label="Optimized parameter error")
+p23 = plot(optimized_coeff_collection[parameter_index] - p_perturbated_collection[parameter_index], label="Change in parameters")
 p2 = plot(p21, p22, p23, layout=(3, 1), size=(750, 750))
 display(p2)
 
-p31 = plot(wrong_sol[100, :] - sol[100, :], label="Initial time domain error")
-p32 = plot!(optimized_sol[100, :] - sol[100, :], label="Optimized time domain error")
+p31 = plot(wrong_sol_collection[parameter_index][100, :] - sol[100, :], label="Initial time domain error")
+p32 = plot!(optimized_sol_collection[parameter_index][100, :] - sol[100, :], label="Optimized time domain error")
 display(p31)
