@@ -1,4 +1,5 @@
 export error_loss, error_position_loss, state_sum_loss, energy_flux_loss_function, error_position_frequency_loss, error_position_frequency_energy_loss
+export error_position_loss_spatial_regularization
 
 using FFTW
 
@@ -42,4 +43,16 @@ function error_position_frequency_energy_loss(pred_func, sol, Θ, position, uppe
     l_diff = pred_complex - s
     l = FFTW.fft(l_diff)[1:upper_frequency].^2
     return sum(abs2, l), pred
+end
+
+function error_position_loss_spatial_regularization(pred_func, sol, Θ, position, frequency_weight)
+    pred = pred_func(Θ)
+    l_time = pred[position, :] - sol[position, :]
+    Θ_complex = Complex.(Θ)
+    l_coeff = abs.(FFTW.fft(Θ_complex))
+    coeff_length = div(length(l_coeff), 2)
+    l_coeff = l_coeff[1:coeff_length]
+    scale_array = 1:length(l_coeff)
+    # @infiltrate
+    return sum(abs2, l_time) + frequency_weight*sum(scale_array .* l_coeff), pred
 end

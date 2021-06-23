@@ -20,11 +20,11 @@ using BenchmarkTools
 using FiniteDifferences
 using Infiltrator
 
-plotlyjs()
-
 using DelimitedFiles
 using Simutils
 
+# plotlyjs()
+pyplot()
 
 ## Defining constants for string property
 T = 100.0 # N
@@ -162,29 +162,42 @@ for param in 1:param_length
     push!(optimized_sol_collection, optimized_sol)
 end
 
-# gren, blue red
+
 ## Plot metrics of convergence test
-p1 = plot()
+p1 = plot(ylabel="loss", xlabel="Iteration", legend=:top)
 for param in 1:param_length
-    _ = plot!(loss_collection[param], label="Loss: range-$(perturbation_list[param]), step-length-$(step_length_list[param])", ylims=(0, max(loss_collection[param]...)*1.1))
+    _ = plot!(loss_collection[param], label="Loss: a,b=$(perturbation_list[param]), step-length=$(step_length_list[param])",yticks=0:30:max(loss_collection[param]...)*1.1, ylims=(0, max(loss_collection[param]...)*1.1))
 end
 
-p2 = plot()
+p2 = plot(ylabel="euclidian distance", xlabel="iteration", legend=:bottomright)
 for param in 1:param_length
-    _ = plot!(parameter_distance_collection[param], label="Parameter distance: range-$(perturbation_list[param]), step-length-$(step_length_list[param])", ylims=(0, max(parameter_distance_collection[param]...)*1.1))
+    _ = plot!(parameter_distance_collection[param], label="Parameter distance: a,b=$(perturbation_list[param]), step-length=$(step_length_list[param])", ylims=(0, max(parameter_distance_collection[param]...)*1.1))
 end
+
 
 p1 = plot(p1, p2, layout=(2, 1))
 display(p1)
-
+savefig("figures/region_of_convergence_test/loss_euclidian_distance.eps")
 
 parameter_index = 1
-p21 = plot(p_perturbated_collection[parameter_index] - p, label="Initial parameter error")
-p22 = plot(optimized_coeff_collection[parameter_index] - p, label="Optimized parameter error")
-p23 = plot(optimized_coeff_collection[parameter_index] - p_perturbated_collection[parameter_index], label="Change in parameters")
+p21 = plot(p_perturbated_collection[parameter_index] - p, label="Initial coefficient error", xlabel="position")
+p22 = plot(optimized_coeff_collection[parameter_index] - p, label="Optimized coefficient error", xlabel="position")
+p23 = plot(optimized_coeff_collection[parameter_index] - p_perturbated_collection[parameter_index], label="Change in coefficients", xlabel="position")
 p2 = plot(p21, p22, p23, layout=(3, 1), size=(750, 750))
 display(p2)
+savefig("figures/region_of_convergence_test/change_in_coefficients.eps")
 
-p31 = plot(wrong_sol_collection[parameter_index][100, :] - sol[100, :], label="Initial time domain error")
-p32 = plot!(optimized_sol_collection[parameter_index][100, :] - sol[100, :], label="Optimized time domain error")
+p31 = plot(wrong_sol_collection[parameter_index][100, :] - sol[100, :], label="Initial time domain error", size=(700, 350))
+p32 = plot!(optimized_sol_collection[parameter_index][100, :] - sol[100, :], label="Optimized time domain error", xlabel="time [s]")
 display(p31)
+savefig("figures/region_of_convergence_test/time_domain_error.eps")
+
+## Calculate reduced loss values
+loss_percentage_1 = 1 - parameter_distance_collection[1][end]/parameter_distance_collection[1][1]
+loss_percentage_2 = 1 - parameter_distance_collection[2][end]/parameter_distance_collection[2][1]
+loss_percentage_3 = 1 - parameter_distance_collection[3][end]/parameter_distance_collection[3][1]
+
+display("Loss reduction with gamma=$(step_length_list[1]): $(loss_percentage_1)")
+display("Loss reduction with gamma=$(step_length_list[2]): $(loss_percentage_2)")
+display("Loss reduction with gamma=$(step_length_list[3]): $(loss_percentage_3)")
+
